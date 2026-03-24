@@ -9,14 +9,13 @@ const formatarCPF = (cpf: string): string => {
   return `${cpf.slice(0, 3)}.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-${cpf.slice(9, 11)}`;
 };
 
-// Dados mockados com CPF já formatado
 let clientesMock: Cliente[] = [
   {
     id: 1,
     nome: 'João Silva',
     email: 'joao@email.com',
     telefone: '(11) 99999-9999',
-    cpf: '529.982.247-25', // CPF já formatado
+    cpf: '529.982.247-25',
     endereco: 'Rua das Flores, 123 - São Paulo, SP',
     dataCadastro: '2024-01-15'
   },
@@ -25,7 +24,7 @@ let clientesMock: Cliente[] = [
     nome: 'Maria Santos',
     email: 'maria@email.com',
     telefone: '(11) 88888-8888',
-    cpf: '123.456.789-00', // CPF já formatado
+    cpf: '123.456.789-00',
     endereco: 'Av. Principal, 456 - São Paulo, SP',
     dataCadastro: '2024-02-20'
   },
@@ -34,7 +33,7 @@ let clientesMock: Cliente[] = [
     nome: 'Pedro Oliveira',
     email: 'pedro@email.com',
     telefone: '(11) 77777-7777',
-    cpf: '987.654.321-00', // CPF já formatado
+    cpf: '987.654.321-00',
     endereco: 'Rua dos Pinheiros, 789 - São Paulo, SP',
     dataCadastro: '2024-03-10'
   }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { validarEmail, validarCPF, avaliarForcaSenha, formatarCPF } from '../utils/validations';
+import '../App.css';
 
 const Cadastro: React.FC = () => {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ const Cadastro: React.FC = () => {
     if (!email) {
       novosErros.email = 'Email é obrigatório';
     } else if (!validarEmail(email)) {
-      novosErros.email = 'Digite um email válido (ex: nome@email.com)';
+      novosErros.email = 'Digite um email válido (ex: nome@gmail.com)';
     }
 
     // Validação do CPF
@@ -112,7 +113,7 @@ const Cadastro: React.FC = () => {
     }
   };
 
-  // Função para obter a cor da barra de força da senha
+
   const getForcaCor = () => {
     if (!forcaSenha) return '#ddd';
     switch (forcaSenha.forca) {
@@ -123,7 +124,6 @@ const Cadastro: React.FC = () => {
     }
   };
 
-  // Função para obter a largura da barra de força
   const getForcaLargura = () => {
     if (!forcaSenha) return '0%';
     return `${(forcaSenha.pontos / 6) * 100}%`;
@@ -133,59 +133,54 @@ const Cadastro: React.FC = () => {
     <div style={styles.container}>
       <div style={styles.card}>
         <h1 style={styles.title}>Sistema Concessionária</h1>
-        <h2 style={styles.subtitle}>Cadastro de Usuário</h2>
         
         {erros.submit && <div style={styles.erro}>{erros.submit}</div>}
         
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Nome Completo:</label>
             <input
               type="text"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               style={{...styles.input, borderColor: erros.nome ? '#dc3545' : '#ddd'}}
               disabled={carregando}
+              placeholder="Nome Completo"
             />
             {erros.nome && <span style={styles.errorText}>{erros.nome}</span>}
           </div>
           
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Email:</label>
             <input
-              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               style={{...styles.input, borderColor: erros.email ? '#dc3545' : '#ddd'}}
               disabled={carregando}
-              placeholder="seu@email.com"
+              placeholder="E-mail"
             />
             {erros.email && <span style={styles.errorText}>{erros.email}</span>}
           </div>
           
           <div style={styles.inputGroup}>
-            <label style={styles.label}>CPF:</label>
             <input
               type="text"
               value={cpf}
               onChange={handleCpfChange}
               style={{...styles.input, borderColor: erros.cpf ? '#dc3545' : '#ddd'}}
               disabled={carregando}
-              placeholder="000.000.000-00"
+              placeholder="CPF"
               maxLength={14}
             />
             {erros.cpf && <span style={styles.errorText}>{erros.cpf}</span>}
           </div>
           
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Senha:</label>
             <input
               type="password"
               value={senha}
               onChange={handleSenhaChange}
               style={{...styles.input, borderColor: erros.senha ? '#dc3545' : '#ddd'}}
               disabled={carregando}
-              placeholder="********"
+              placeholder="Senha"
             />
             
             {/* Indicador de força da senha */}
@@ -216,14 +211,13 @@ const Cadastro: React.FC = () => {
           </div>
           
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Confirmar Senha:</label>
             <input
               type="password"
               value={confirmarSenha}
               onChange={(e) => setConfirmarSenha(e.target.value)}
               style={{...styles.input, borderColor: erros.confirmarSenha ? '#dc3545' : '#ddd'}}
               disabled={carregando}
-              placeholder="********"
+              placeholder="Confirmar Senha"
             />
             {erros.confirmarSenha && <span style={styles.errorText}>{erros.confirmarSenha}</span>}
           </div>
@@ -245,7 +239,6 @@ const Cadastro: React.FC = () => {
   );
 };
 
-// Estilos (vamos migrar para CSS depois)
 const styles = {
   container: {
     display: 'flex',
@@ -253,7 +246,7 @@ const styles = {
     alignItems: 'center',
     minHeight: '100vh',
     backgroundColor: '#f5f5f5',
-    padding: '20px'
+    padding: '40px'
   },
   card: {
     backgroundColor: 'white',
@@ -265,14 +258,9 @@ const styles = {
   },
   title: {
     fontSize: '24px',
+    fontFamily: "Arial, Helvetica, sans-serif",
     color: '#333',
-    marginBottom: '8px',
-    textAlign: 'center' as const
-  },
-  subtitle: {
-    fontSize: '18px',
-    color: '#666',
-    marginBottom: '24px',
+    marginBottom: '25px',
     textAlign: 'center' as const
   },
   form: {
@@ -287,23 +275,27 @@ const styles = {
   },
   label: {
     fontSize: '14px',
+    fontFamily: "Arial, Helvetica, sans-serif",
     fontWeight: 'bold',
     color: '#333'
   },
   input: {
-    padding: '10px',
+    padding: '15px',
     border: '1px solid #ddd',
-    borderRadius: '4px',
+    borderRadius: '15px',
     fontSize: '16px',
-    transition: 'border-color 0.3s'
+    transition: 'border-color 0.3s',
+    margin: '10px'
   },
   button: {
-    backgroundColor: '#28a745',
+    backgroundColor: '#007bff',
     color: 'white',
-    padding: '12px',
+    padding: '15px',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '15px',
     fontSize: '16px',
+    fontWeight: 'bold',
+    fontFamily: "Arial, Helvetica, sans-serif",
     cursor: 'pointer',
     marginTop: '8px'
   },
@@ -318,6 +310,7 @@ const styles = {
   errorText: {
     color: '#dc3545',
     fontSize: '12px',
+    fontFamily: "Arial, Helvetica, sans-serif",
     marginTop: '4px'
   },
   forcaContainer: {
@@ -330,10 +323,12 @@ const styles = {
   },
   forcaLabel: {
     fontSize: '12px',
+    fontFamily: "Arial, Helvetica, sans-serif",
     color: '#666'
   },
   forcaTexto: {
     fontSize: '12px',
+    fontFamily: "Arial, Helvetica, sans-serif",
     fontWeight: 'bold'
   },
   forcaBarraBg: {
@@ -348,6 +343,7 @@ const styles = {
   },
   forcaMensagem: {
     fontSize: '11px',
+    fontFamily: "Arial, Helvetica, sans-serif",
     color: '#666',
     marginTop: '4px',
     display: 'block'
@@ -355,6 +351,7 @@ const styles = {
   linkContainer: {
     marginTop: '16px',
     textAlign: 'center' as const,
+    fontFamily: "Arial, Helvetica, sans-serif",
     fontSize: '14px'
   },
   link: {
