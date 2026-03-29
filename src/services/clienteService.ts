@@ -1,6 +1,6 @@
 import { Cliente, ClienteFormData } from '../types/cliente';
+import { listarVeiculos } from './veiculoService';
 
-// Função para formatar CPF
 const formatarCPF = (cpf: string): string => {
   cpf = cpf.replace(/[^\d]/g, '');
   if (cpf.length <= 3) return cpf;
@@ -12,34 +12,38 @@ const formatarCPF = (cpf: string): string => {
 let clientesMock: Cliente[] = [
   {
     id: 1,
-    nome: 'João Silva',
-    email: 'joao@email.com',
-    telefone: '(11) 99999-9999',
+    nome: 'Jacinto Leite',
+    email: 'jacinto@email.com',
+    telefone: '(44) 99999-9999',
     cpf: '529.982.247-25',
     endereco: 'Rua das Flores, 123 - São Paulo, SP',
     dataCadastro: '2024-01-15'
   },
   {
     id: 2,
-    nome: 'Maria Santos',
-    email: 'maria@email.com',
-    telefone: '(11) 88888-8888',
+    nome: 'Olimar',
+    email: 'olimar@email.com',
+    telefone: '(47) 96434-876',
     cpf: '123.456.789-00',
     endereco: 'Av. Principal, 456 - São Paulo, SP',
     dataCadastro: '2024-02-20'
   },
   {
     id: 3,
-    nome: 'Pedro Oliveira',
-    email: 'pedro@email.com',
-    telefone: '(11) 77777-7777',
+    nome: 'Maria Santos',
+    email: 'maria@email.com',
+    telefone: '(11) 88888-8888',
     cpf: '987.654.321-00',
     endereco: 'Rua dos Pinheiros, 789 - São Paulo, SP',
     dataCadastro: '2024-03-10'
   }
 ];
 
-// Função para listar clientes com paginação
+const buscarVeiculosPorCliente = async (clienteId: number) => {
+  const veiculos = await listarVeiculos(1, 1000);
+  return veiculos.dados.filter(v => v.clienteId === clienteId);
+};
+
 export const listarClientes = async (
   pagina: number = 1,
   itensPorPagina: number = 5
@@ -50,30 +54,39 @@ export const listarClientes = async (
   const fim = inicio + itensPorPagina;
   const dados = clientesMock.slice(inicio, fim);
   
+  const dadosComVeiculos = await Promise.all(
+    dados.map(async cliente => ({
+      ...cliente,
+      veiculos: await buscarVeiculosPorCliente(cliente.id)
+    }))
+  );
+  
   return {
-    dados,
+    dados: dadosComVeiculos,
     total: clientesMock.length
   };
 };
 
-// Função para buscar cliente por ID
 export const buscarClientePorId = async (id: number): Promise<Cliente | null> => {
   await new Promise(resolve => setTimeout(resolve, 300));
   const cliente = clientesMock.find(c => c.id === id);
-  return cliente || null;
+  if (!cliente) return null;
+  
+  return {
+    ...cliente,
+    veiculos: await buscarVeiculosPorCliente(cliente.id)
+  };
 };
 
-// Função para criar cliente
 export const criarCliente = async (dados: ClienteFormData): Promise<Cliente> => {
   await new Promise(resolve => setTimeout(resolve, 500));
   
-  // Formatar CPF antes de salvar
   const cpfFormatado = formatarCPF(dados.cpf);
   
   const novoCliente: Cliente = {
     id: Math.max(...clientesMock.map(c => c.id), 0) + 1,
     ...dados,
-    cpf: cpfFormatado, // Salva o CPF formatado
+    cpf: cpfFormatado,
     dataCadastro: new Date().toISOString().split('T')[0]
   };
   
@@ -81,37 +94,26 @@ export const criarCliente = async (dados: ClienteFormData): Promise<Cliente> => 
   return novoCliente;
 };
 
-// Função para atualizar cliente
 export const atualizarCliente = async (id: number, dados: Partial<ClienteFormData>): Promise<Cliente> => {
   await new Promise(resolve => setTimeout(resolve, 500));
   
   const index = clientesMock.findIndex(c => c.id === id);
-  if (index === -1) {
-    throw new Error('Cliente não encontrado');
-  }
+  if (index === -1) throw new Error('Cliente não encontrado');
   
-  // Se tiver CPF nos dados, formatar antes de salvar
   const dadosFormatados = { ...dados };
   if (dadosFormatados.cpf) {
     dadosFormatados.cpf = formatarCPF(dadosFormatados.cpf);
   }
   
-  clientesMock[index] = {
-    ...clientesMock[index],
-    ...dadosFormatados
-  };
-  
+  clientesMock[index] = { ...clientesMock[index], ...dadosFormatados };
   return clientesMock[index];
 };
 
-// Função para deletar cliente
 export const deletarCliente = async (id: number): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 500));
   
   const index = clientesMock.findIndex(c => c.id === id);
-  if (index === -1) {
-    throw new Error('Cliente não encontrado');
-  }
+  if (index === -1) throw new Error('Cliente não encontrado');
   
   clientesMock.splice(index, 1);
 };

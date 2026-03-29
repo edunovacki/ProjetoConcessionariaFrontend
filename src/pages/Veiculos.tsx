@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listarVeiculos, deletarVeiculo } from '../services/veiculoService';
+import { listarClientes } from '../services/clienteService';
 import { Veiculo } from '../types/veiculo';
 
 const Veiculos: React.FC = () => {
   const navigate = useNavigate();
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
+  const [clientes, setClientes] = useState<{ [key: number]: string }>({});
   const [loading, setLoading] = useState(true);
   const [pagina, setPagina] = useState(1);
   const [total, setTotal] = useState(0);
@@ -13,15 +15,24 @@ const Veiculos: React.FC = () => {
   const itensPorPagina = 5;
 
   useEffect(() => {
-    carregarVeiculos();
+    carregarDados();
   }, [pagina]);
 
-  const carregarVeiculos = async () => {
+  const carregarDados = async () => {
     setLoading(true);
     try {
-      const response = await listarVeiculos(pagina, itensPorPagina);
-      setVeiculos(response.dados);
-      setTotal(response.total);
+      const veiculosResponse = await listarVeiculos(pagina, itensPorPagina);
+      setVeiculos(veiculosResponse.dados);
+      setTotal(veiculosResponse.total);
+      
+      // Carregar clientes para mostrar o nome
+      const clientesResponse = await listarClientes(1, 1000);
+      const clientesMap: { [key: number]: string } = {};
+      clientesResponse.dados.forEach(cliente => {
+        clientesMap[cliente.id] = cliente.nome;
+      });
+      setClientes(clientesMap);
+      
     } catch (error) {
       console.error('Erro ao carregar veículos:', error);
       alert('Erro ao carregar lista de veículos');
@@ -39,7 +50,7 @@ const Veiculos: React.FC = () => {
     try {
       await deletarVeiculo(id);
       alert('Veículo deletado com sucesso!');
-      carregarVeiculos();
+      carregarDados();
     } catch (error) {
       console.error('Erro ao deletar veículo:', error);
       alert('Erro ao deletar veículo');
@@ -54,31 +65,6 @@ const Veiculos: React.FC = () => {
 
   const handleNovo = () => {
     navigate('/veiculos/novo');
-  };
-
-  const getStatusColor = (status: string) => {
-    switch(status) {
-      case 'disponivel': return '#28a745';
-      case 'vendido': return '#dc3545';
-      case 'reservado': return '#ffc107';
-      default: return '#6c757d';
-    }
-  };
-
-  const getStatusTexto = (status: string) => {
-    switch(status) {
-      case 'disponivel': return 'Disponível';
-      case 'vendido': return 'Vendido';
-      case 'reservado': return 'Reservado';
-      default: return status;
-    }
-  };
-
-  const formatarPreco = (preco: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(preco);
   };
 
   const totalPaginas = Math.ceil(total / itensPorPagina);
@@ -100,13 +86,12 @@ const Veiculos: React.FC = () => {
             <thead>
               <tr>
                 <th>ID</th>
+                <th>Placa</th>
                 <th>Modelo</th>
                 <th>Marca</th>
                 <th>Ano</th>
-                <th>Placa</th>
                 <th>Cor</th>
-                <th>Preço</th>
-                <th>Status</th>
+                <th>Cliente</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -114,20 +99,12 @@ const Veiculos: React.FC = () => {
               {veiculos.map((veiculo) => (
                 <tr key={veiculo.id}>
                   <td>{veiculo.id}</td>
+                  <td>{veiculo.placa}</td>
                   <td>{veiculo.modelo}</td>
                   <td>{veiculo.marca}</td>
                   <td>{veiculo.ano}</td>
-                  <td>{veiculo.placa}</td>
                   <td>{veiculo.cor}</td>
-                  <td>{formatarPreco(veiculo.preco)}</td>
-                  <td>
-                    <span style={{
-                      ...styles.statusBadge,
-                      backgroundColor: getStatusColor(veiculo.status)
-                    }}>
-                      {getStatusTexto(veiculo.status)}
-                    </span>
-                  </td>
+                  <td>{clientes[veiculo.clienteId] || 'Cliente não encontrado'}</td>
                   <td style={styles.acoes}>
                     <button
                       onClick={() => handleEditar(veiculo.id)}
@@ -147,6 +124,15 @@ const Veiculos: React.FC = () => {
               ))}
             </tbody>
           </table>
+
+          {veiculos.length === 0 && (
+            <div style={styles.emptyState}>
+              <p>Nenhum veículo cadastrado.</p>
+              <button onClick={handleNovo} style={styles.buttonNovoEmpty}>
+                Cadastrar primeiro veículo
+              </button>
+            </div>
+          )}
 
           {totalPaginas > 1 && (
             <div style={styles.paginacao}>
@@ -193,6 +179,16 @@ const styles = {
     cursor: 'pointer',
     fontSize: '14px'
   },
+  buttonNovoEmpty: {
+    backgroundColor: '#28a745',
+    color: 'white',
+    padding: '10px 20px',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    marginTop: '10px'
+  },
   table: {
     width: '100%',
     borderCollapse: 'collapse' as const,
@@ -202,6 +198,11 @@ const styles = {
     textAlign: 'center' as const,
     padding: '40px',
     fontSize: '18px',
+    color: '#666'
+  },
+  emptyState: {
+    textAlign: 'center' as const,
+    padding: '40px',
     color: '#666'
   },
   acoes: {
@@ -246,14 +247,6 @@ const styles = {
   paginaInfo: {
     fontSize: '14px',
     color: '#666'
-  },
-  statusBadge: {
-    padding: '4px 8px',
-    borderRadius: '4px',
-    color: 'white',
-    fontSize: '12px',
-    fontWeight: 'bold',
-    display: 'inline-block'
   }
 };
 

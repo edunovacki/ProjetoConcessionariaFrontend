@@ -10,10 +10,9 @@ import ClienteForm from '../pages/ClienteForm';
 import Dashboard from '../pages/Dashboard';
 import Veiculos from '../pages/Veiculos';
 import VeiculoForm from '../pages/VeiculoForm';
-import Orcamentos from '../pages/Orcamentos';
-import OrcamentoForm from '../pages/OrcamentoForm';
-
-const Perfil = () => <div>Meu Perfil</div>;
+import OrdensServico from '../pages/OrdensServico';
+import OrdemServicoForm from '../pages/OrdemServicoForm';
+import Perfil from '../pages/Perfil';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -95,32 +94,32 @@ const AppRoutes: React.FC = () => {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/orcamentos" 
+          {/*<Route 
+            path="/ordens-servico" 
             element={
               <ProtectedRoute>
                 <Layout>
-                  <Orcamentos />
+                  <OrdensServico />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />*/}
+          <Route 
+            path="/ordens-servico/novo" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <OrdemServicoForm />
                 </Layout>
               </ProtectedRoute>
             } 
           />
           <Route 
-            path="/orcamentos/novo" 
+            path="/ordens-servico/editar/:id" 
             element={
               <ProtectedRoute>
                 <Layout>
-                  <OrcamentoForm />
-                </Layout>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/orcamentos/editar/:id" 
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <OrcamentoForm />
+                  <OrdemServicoForm />
                 </Layout>
               </ProtectedRoute>
             } 

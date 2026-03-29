@@ -1,3 +1,5 @@
+import { Veiculo } from './veiculo';
+
 export interface Cliente {
   id: number;
   nome: string;
@@ -6,6 +8,7 @@ export interface Cliente {
   cpf: string;
   endereco: string;
   dataCadastro: string;
+  veiculos?: Veiculo[];
 }
 
 export interface ClienteFormData {

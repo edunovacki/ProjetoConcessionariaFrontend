@@ -145,3 +145,16 @@ export const formatarMoedaDigitacao = (valor: string): string => {
   // Formata como moeda
   return formatarMoeda(numero);
 };
+
+// Formatar placa
+export const formatarPlaca = (placa: string): string => {
+  placa = placa.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
+  if (placa.length === 7) {
+    return `${placa.slice(0, 3)}-${placa.slice(3, 7)}`;
+  } else if (placa.length === 8) {
+    return `${placa.slice(0, 3)}${placa.slice(3, 4)}${placa.slice(4, 5)}${placa.slice(5, 7)}`;
+  }
+  
+  return placa;
+};

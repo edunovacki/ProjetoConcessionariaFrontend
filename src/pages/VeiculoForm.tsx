@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { criarVeiculo, atualizarVeiculo, buscarVeiculoPorId } from '../services/veiculoService';
-import { formatarMoeda, moedaParaNumero, formatarMoedaDigitacao } from '../utils/validations';
+import { listarClientes } from '../services/clienteService';
+import { Cliente } from '../types/cliente';
+import { formatarPlaca } from '../utils/validations';
 
 interface FormData {
+  placa: string;
   modelo: string;
   marca: string;
   ano: number;
-  placa: string;
   cor: string;
-  preco: number;
-  status: 'disponivel' | 'vendido' | 'reservado';
+  clienteId: number;
+  observacoes: string;
 }
 
 const VeiculoForm: React.FC = () => {
@@ -19,41 +21,49 @@ const VeiculoForm: React.FC = () => {
   const isEdicao = !!id;
 
   const [formData, setFormData] = useState<FormData>({
+    placa: '',
     modelo: '',
     marca: '',
     ano: new Date().getFullYear(),
-    placa: '',
     cor: '',
-    preco: 0,
-    status: 'disponivel'
+    clienteId: 0,
+    observacoes: ''
   });
   
-  const [precoDisplay, setPrecoDisplay] = useState<string>('');
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [erros, setErros] = useState<{ [key: string]: string }>({});
   const [carregando, setCarregando] = useState(false);
   const [carregandoDados, setCarregandoDados] = useState(isEdicao);
 
   useEffect(() => {
+    carregarClientes();
     if (isEdicao && id) {
       carregarVeiculo(parseInt(id));
     }
   }, [id, isEdicao]);
+
+  const carregarClientes = async () => {
+    try {
+      const response = await listarClientes(1, 1000);
+      setClientes(response.dados);
+    } catch (error) {
+      console.error('Erro ao carregar clientes:', error);
+    }
+  };
 
   const carregarVeiculo = async (veiculoId: number) => {
     try {
       const veiculo = await buscarVeiculoPorId(veiculoId);
       if (veiculo) {
         setFormData({
+          placa: veiculo.placa,
           modelo: veiculo.modelo,
           marca: veiculo.marca,
           ano: veiculo.ano,
-          placa: veiculo.placa,
           cor: veiculo.cor,
-          preco: veiculo.preco,
-          status: veiculo.status
+          clienteId: veiculo.clienteId,
+          observacoes: veiculo.observacoes || ''
         });
-        // Formatar o preço para exibição
-        setPrecoDisplay(formatarMoeda(veiculo.preco));
       } else {
         alert('Veículo não encontrado');
         navigate('/veiculos');
@@ -66,57 +76,34 @@ const VeiculoForm: React.FC = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
-    if (name === 'preco') {
-      // Formata o preço enquanto digita
-      const valorFormatado = formatarMoedaDigitacao(value);
-      setPrecoDisplay(valorFormatado);
-      
-      // Converte para número e salva no formData
-      const valorNumerico = moedaParaNumero(valorFormatado);
-      setFormData({ ...formData, preco: valorNumerico });
-      
-      // Limpa erro do campo
-      if (erros.preco) {
-        setErros({ ...erros, preco: '' });
-      }
-    } else {
-      let valorFormatado: any = value;
-      
-      if (name === 'ano') {
-        valorFormatado = parseInt(value) || new Date().getFullYear();
-      } else if (name === 'placa') {
-        valorFormatado = value.toUpperCase();
-      }
-      
-      setFormData({ ...formData, [name]: valorFormatado });
-      
-      if (erros[name]) {
-        setErros({ ...erros, [name]: '' });
-      }
+    let valorFormatado: any = value;
+    
+    if (name === 'ano') {
+      valorFormatado = parseInt(value) || new Date().getFullYear();
+    } else if (name === 'placa') {
+      valorFormatado = value.toUpperCase();
+    } else if (name === 'clienteId') {
+      valorFormatado = parseInt(value);
     }
-  };
-
-  const handlePrecoFocus = () => {
-    // Quando o campo recebe foco, mostra apenas os números
-    if (formData.preco > 0) {
-      setPrecoDisplay(formData.preco.toString());
-    }
-  };
-
-  const handlePrecoBlur = () => {
-    // Quando perde o foco, formata como moeda
-    if (formData.preco > 0) {
-      setPrecoDisplay(formatarMoeda(formData.preco));
-    } else {
-      setPrecoDisplay('');
+    
+    setFormData({ ...formData, [name]: valorFormatado });
+    
+    if (erros[name]) {
+      setErros({ ...erros, [name]: '' });
     }
   };
 
   const validarFormulario = (): boolean => {
     const novosErros: { [key: string]: string } = {};
+
+    if (!formData.placa.trim()) {
+      novosErros.placa = 'Placa é obrigatória';
+    } else if (formData.placa.length < 7 || formData.placa.length > 8) {
+      novosErros.placa = 'Placa deve ter 7 ou 8 caracteres';
+    }
 
     if (!formData.modelo.trim()) {
       novosErros.modelo = 'Modelo é obrigatório';
@@ -133,18 +120,12 @@ const VeiculoForm: React.FC = () => {
       novosErros.ano = `Ano deve estar entre 1950 e ${anoAtual + 1}`;
     }
 
-    if (!formData.placa.trim()) {
-      novosErros.placa = 'Placa é obrigatória';
-    } else if (formData.placa.length < 7 || formData.placa.length > 8) {
-      novosErros.placa = 'Placa deve ter 7 ou 8 caracteres';
-    }
-
     if (!formData.cor.trim()) {
       novosErros.cor = 'Cor é obrigatória';
     }
 
-    if (!formData.preco || formData.preco <= 0) {
-      novosErros.preco = 'Preço deve ser maior que zero';
+    if (!formData.clienteId || formData.clienteId === 0) {
+      novosErros.clienteId = 'Selecione um cliente';
     }
 
     setErros(novosErros);
@@ -190,6 +171,41 @@ const VeiculoForm: React.FC = () => {
 
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.formGroup}>
+          <label style={styles.label}>Cliente:*</label>
+          <select
+            name="clienteId"
+            value={formData.clienteId}
+            onChange={handleChange}
+            style={{...styles.select, borderColor: erros.clienteId ? '#dc3545' : '#ddd'}}
+            disabled={carregando}
+          >
+            <option value={0}>Selecione um cliente</option>
+            {clientes.map(cliente => (
+              <option key={cliente.id} value={cliente.id}>
+                {cliente.nome} - {cliente.cpf}
+              </option>
+            ))}
+          </select>
+          {erros.clienteId && <span style={styles.errorText}>{erros.clienteId}</span>}
+        </div>
+
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Placa:*</label>
+          <input
+            type="text"
+            name="placa"
+            value={formData.placa}
+            onChange={handleChange}
+            style={{...styles.input, borderColor: erros.placa ? '#dc3545' : '#ddd'}}
+            disabled={carregando}
+            placeholder="ABC-1234 ou ABC1D23"
+            maxLength={8}
+          />
+          {erros.placa && <span style={styles.errorText}>{erros.placa}</span>}
+          <span style={styles.helperText}>Formato: ABC-1234 (antigo) ou ABC1D23 (Mercosul)</span>
+        </div>
+
+        <div style={styles.formGroup}>
           <label style={styles.label}>Modelo:*</label>
           <input
             type="text"
@@ -229,22 +245,6 @@ const VeiculoForm: React.FC = () => {
         </div>
 
         <div style={styles.formGroup}>
-          <label style={styles.label}>Placa:*</label>
-          <input
-            type="text"
-            name="placa"
-            value={formData.placa}
-            onChange={handleChange}
-            style={{...styles.input, borderColor: erros.placa ? '#dc3545' : '#ddd'}}
-            disabled={carregando}
-            placeholder="ABC-1234 ou ABC1D23"
-            maxLength={8}
-          />
-          {erros.placa && <span style={styles.errorText}>{erros.placa}</span>}
-          <span style={styles.helperText}>Formato: ABC-1234 (antigo) ou ABC1D23 (Mercosul)</span>
-        </div>
-
-        <div style={styles.formGroup}>
           <label style={styles.label}>Cor:*</label>
           <input
             type="text"
@@ -258,35 +258,16 @@ const VeiculoForm: React.FC = () => {
         </div>
 
         <div style={styles.formGroup}>
-          <label style={styles.label}>Preço:*</label>
-          <input
-            type="text"
-            name="preco"
-            value={precoDisplay}
+          <label style={styles.label}>Observações:</label>
+          <textarea
+            name="observacoes"
+            value={formData.observacoes}
             onChange={handleChange}
-            onFocus={handlePrecoFocus}
-            onBlur={handlePrecoBlur}
-            style={{...styles.input, borderColor: erros.preco ? '#dc3545' : '#ddd'}}
+            style={styles.textarea}
             disabled={carregando}
-            placeholder="R$ 0,00"
+            rows={3}
+            placeholder="Observações sobre o veículo..."
           />
-          {erros.preco && <span style={styles.errorText}>{erros.preco}</span>}
-          <span style={styles.helperText}>Digite apenas números - formatação automática</span>
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Status:*</label>
-          <select
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            style={styles.select}
-            disabled={carregando}
-          >
-            <option value="disponivel">Disponível</option>
-            <option value="reservado">Reservado</option>
-            <option value="vendido">Vendido</option>
-          </select>
         </div>
 
         <div style={styles.buttonGroup}>
@@ -346,6 +327,14 @@ const styles = {
     borderRadius: '4px',
     fontSize: '16px',
     backgroundColor: 'white'
+  },
+  textarea: {
+    padding: '10px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '16px',
+    fontFamily: 'inherit',
+    resize: 'vertical' as const
   },
   helperText: {
     fontSize: '11px',

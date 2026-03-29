@@ -34,7 +34,7 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validarFormulario()) {
       return;
     }
@@ -51,7 +51,9 @@ const Login: React.FC = () => {
         const userData = {
           id: 1,
           nome: 'Administrador',
-          email: email
+          email: email,
+          cpf: '529.982.247-25',
+          telefone: '(11) 99999-9999'
         };
 
         login(tokenSimulado, userData);

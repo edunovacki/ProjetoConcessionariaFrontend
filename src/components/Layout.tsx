@@ -1,6 +1,8 @@
 import React, { ReactNode } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom'; // ← useLocation importado
 import { useAuth } from '../contexts/AuthContext';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChartColumn, faUsers, faCar, faWrench, faUser, faSignOutAlt, } from '@fortawesome/free-solid-svg-icons';
 
 interface LayoutProps {
   children: ReactNode;
@@ -22,69 +24,72 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div style={styles.logo}>
           <h2>Concessionária</h2>
         </div>
-        
+
         <nav style={styles.nav}>
-          <Link 
-            to="/dashboard" 
+          <Link
+            to="/dashboard"
             style={{
               ...styles.navLink,
               ...(location.pathname === '/dashboard' ? styles.navLinkActive : {}) // ← USANDO LOCATION
             }}
           >
-            📊 Dashboard
+            <FontAwesomeIcon icon={faChartColumn} style={{ marginRight: '10px' }} />
+            Dashboard
           </Link>
-          <Link 
-            to="/clientes" 
+          <Link
+            to="/clientes"
             style={{
               ...styles.navLink,
               ...(location.pathname === '/clientes' ? styles.navLinkActive : {}) // ← USANDO LOCATION
             }}
           >
-            👥 Clientes
+            <FontAwesomeIcon icon={faUsers} style={{ marginRight: '10px' }} />
+            Clientes
           </Link>
-          <Link 
-            to="/veiculos" 
+          <Link
+            to="/veiculos"
             style={{
               ...styles.navLink,
               ...(location.pathname === '/veiculos' ? styles.navLinkActive : {}) // ← USANDO LOCATION
             }}
           >
-            🚗 Veículos
+            <FontAwesomeIcon icon={faCar} style={{ marginRight: '10px' }} />
+            Veículos
           </Link>
-          <Link 
-            to="/orcamentos" 
+          {/*<Link
+            to="/ordens-servico"
             style={{
               ...styles.navLink,
-              ...(location.pathname === '/orcamentos' ? styles.navLinkActive : {}) // ← USANDO LOCATION
+              ...(location.pathname === '/ordens-servico' ? styles.navLinkActive : {})
             }}
           >
-            📝 Orçamentos
-          </Link>
-          <Link 
-            to="/perfil" 
+            <FontAwesomeIcon icon={faWrench} style={{ marginRight: '10px' }} />
+            Ordens de Serviço
+          </Link>*/}
+          <Link
+            to="/perfil"
             style={{
               ...styles.navLink,
               ...(location.pathname === '/perfil' ? styles.navLinkActive : {}) // ← USANDO LOCATION
             }}
           >
-            👤 Meu Perfil
+            <FontAwesomeIcon icon={faUser} style={{ marginRight: '10px' }} />
+            Meu Perfil
           </Link>
         </nav>
-        
+
         <div style={styles.userInfo}>
           <div style={styles.userName}>
             {user?.nome || 'Usuário'}
           </div>
           <button onClick={handleLogout} style={styles.logoutButton}>
+            <FontAwesomeIcon icon={faSignOutAlt} style={{ marginRight: '8px' }} />
             Sair
           </button>
         </div>
       </aside>
-      
+
       <main style={styles.main}>
-        <header style={styles.header}>
-          <h1>Bem-vindo, {user?.nome || 'Usuário'}!</h1>
-        </header>
         <div style={styles.content}>
           {children}
         </div>
@@ -110,7 +115,8 @@ const styles = {
     overflowY: 'auto' as const
   },
   logo: {
-    padding: '20px',
+    padding: '20px 0 20px 0',
+    fontSize: '20px',
     borderBottom: '1px solid #34495e',
     textAlign: 'center' as const
   },
@@ -124,6 +130,7 @@ const styles = {
   navLink: {
     color: 'white',
     textDecoration: 'none',
+    fontFamily: "Arial, Helvetica, sans-serif",
     padding: '12px 20px',
     transition: 'background-color 0.3s',
     display: 'block'
@@ -139,7 +146,8 @@ const styles = {
   },
   userName: {
     marginBottom: '10px',
-    fontSize: '14px',
+    fontFamily: "Arial, Helvetica, sans-serif",
+    fontSize: '18px',
     fontWeight: 'bold'
   },
   logoutButton: {
@@ -150,7 +158,7 @@ const styles = {
     borderRadius: '4px',
     cursor: 'pointer',
     width: '100%',
-    fontSize: '14px'
+    fontSize: '17px'
   },
   main: {
     flex: 1,
