@@ -1,75 +1,48 @@
+import api from './api';
 import { OrdemServico, OrdemServicoFormData } from '../types/ordemServico';
-import { buscarClientePorId } from './clienteService';
-import { buscarVeiculoPorId } from './veiculoService';
-import { buscarDepartamentoPorId } from './departamentoService';
 
-let ordensServicoMock: OrdemServico[] = [
-  {
-    id: 1,
-    numeroOS: 'OS-001',
-    clienteId: 1,
-    veiculoId: 1,
-    departamentoId: 1,
-    placa: 'Q8B9P',
-    modelo: 'Civicão',
-    marca: 'Honda',
-    ano: 2029,
-    cor: 'Prata',
-    dataEntrada: '2025-02-03',
-    dataPrevisao: '2025-02-28',
-    status: 'em_andamento',
-    servicosRealizar: 'Um amagadinho e uma raladinha na bindinha',
-    observacoes: 'Cliente solicitou revisão completa',
-    consultorResponsavel: 'Eduardo Novacki',
-    tempoDecorrido: 25
-  },
-  {
-    id: 2,
-    numeroOS: 'OS-002',
-    clienteId: 2,
-    veiculoId: 2,
-    departamentoId: 4,
-    placa: 'SXJ4F79',
-    modelo: 'Strada Ultra',
-    marca: 'Fiat',
-    ano: 2025,
-    cor: 'Preto',
-    dataEntrada: '2025-07-31',
-    dataPrevisao: '2025-08-30',
-    status: 'em_andamento',
-    servicosRealizar: 'Colisão traseira, para-choque e etc',
-    observacoes: 'Serviço de funilaria completo',
-    consultorResponsavel: 'Gustavo',
-    tempoDecorrido: 239
-  }
-];
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
-const gerarNumeroOS = (): string => {
-  const ano = new Date().getFullYear();
-  const proximoNumero = ordensServicoMock.length + 1;
-  return `OS-${ano}-${proximoNumero.toString().padStart(4, '0')}`;
+// Mapear os campos do back-end para o front-end
+const mapearOrdem = (orcamento: any): OrdemServico => {
+  return {
+    id: orcamento.id,
+    numeroOS: `OS-${orcamento.id}`,
+    clienteId: orcamento.id_cliente,
+    cliente: orcamento.clientes,
+    veiculoId: orcamento.id_veiculo,
+    veiculo: orcamento.veiculos,
+    departamentoId: orcamento.veiculos?.id_departamento || 1,
+    departamento: orcamento.veiculos?.departamentos,
+    placa: orcamento.veiculos?.placa || '',
+    modelo: orcamento.veiculos?.modelo || '',
+    marca: orcamento.veiculos?.modelo?.split(' ')[0] || '',
+    ano: new Date().getFullYear(),
+    cor: '',
+    dataEntrada: orcamento.data_inicio ? new Date(orcamento.data_inicio).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    dataPrevisao: orcamento.data_termino ? new Date(orcamento.data_termino).toISOString().split('T')[0] : '',
+    status: orcamento.etapa === 'concluido' ? 'concluido' : 
+            orcamento.etapa === 'aguardando_retirada' ? 'aguardando_retirada' : 'em_andamento',
+    servicosRealizar: orcamento.descricao || '',
+    observacoes: '',
+    consultorResponsavel: orcamento.usuarios?.nome || 'Sistema',
+    tempoDecorrido: calcularTempoDecorrido(orcamento.data_inicio)
+  };
 };
 
-const calcularTempoDecorrido = (dataEntrada: string): number => {
+const calcularTempoDecorrido = (dataEntrada: string | Date): number => {
+  if (!dataEntrada) return 0;
   const entrada = new Date(dataEntrada);
   const hoje = new Date();
   const diffTime = Math.abs(hoje.getTime() - entrada.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
-};
-
-const buscarDadosCompletos = async (ordem: OrdemServico): Promise<OrdemServico> => {
-  const cliente = await buscarClientePorId(ordem.clienteId);
-  const veiculo = await buscarVeiculoPorId(ordem.veiculoId);
-  const departamento = await buscarDepartamentoPorId(ordem.departamentoId);
-  
-  return {
-    ...ordem,
-    cliente: cliente || undefined,
-    veiculo: veiculo || undefined,
-    departamento: departamento || undefined,
-    tempoDecorrido: calcularTempoDecorrido(ordem.dataEntrada)
-  };
 };
 
 export const listarOrdensServico = async (
@@ -79,97 +52,76 @@ export const listarOrdensServico = async (
   filtroStatus?: string,
   busca?: string
 ): Promise<{ dados: OrdemServico[]; total: number }> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
+  const params: any = { page: pagina, limit: itensPorPagina };
   
-  // Primeiro, buscar todas as ordens com dados completos
-  const todasOrdensCompletas = await Promise.all(
-    ordensServicoMock.map(ordem => buscarDadosCompletos(ordem))
-  );
-  
-  let filtrados = [...todasOrdensCompletas];
-  
-  // Filtro por departamento
-  if (filtroDepartamento && filtroDepartamento > 0) {
-    filtrados = filtrados.filter(o => o.departamentoId === filtroDepartamento);
-  }
-  
-  // Filtro por status
   if (filtroStatus && filtroStatus !== 'todas') {
-    filtrados = filtrados.filter(o => o.status === filtroStatus);
+    params.etapa = filtroStatus;
   }
   
-  // Filtro por busca (placa, modelo, cliente, número OS)
+  const response = await api.get<PaginatedResponse<any>>('/orcamentos', { params });
+  
+  let dados = response.data.data.map(mapearOrdem);
+  
+  // Filtro por departamento (front-end, pois o back-end não tem esse filtro)
+  if (filtroDepartamento && filtroDepartamento > 0) {
+    dados = dados.filter(o => o.departamentoId === filtroDepartamento);
+  }
+  
+  // Filtro por busca
   if (busca && busca.trim() !== '') {
     const termoBusca = busca.toLowerCase().trim();
-    filtrados = filtrados.filter(o => {
-      // Buscar por placa
-      if (o.placa.toLowerCase().includes(termoBusca)) return true;
-      // Buscar por modelo
-      if (o.modelo.toLowerCase().includes(termoBusca)) return true;
-      // Buscar por número OS
-      if (o.numeroOS.toLowerCase().includes(termoBusca)) return true;
-      // Buscar por nome do cliente
-      if (o.cliente?.nome.toLowerCase().includes(termoBusca)) return true;
-      return false;
-    });
+    dados = dados.filter(o => 
+      o.placa.toLowerCase().includes(termoBusca) ||
+      o.modelo.toLowerCase().includes(termoBusca) ||
+      o.numeroOS.toLowerCase().includes(termoBusca) ||
+      o.cliente?.nome.toLowerCase().includes(termoBusca)
+    );
   }
   
-  const inicio = (pagina - 1) * itensPorPagina;
-  const fim = inicio + itensPorPagina;
-  const dadosPaginados = filtrados.slice(inicio, fim);
-  
   return {
-    dados: dadosPaginados,
-    total: filtrados.length
+    dados,
+    total: dados.length
   };
 };
 
 export const listarTodasOrdensServico = async (): Promise<OrdemServico[]> => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return Promise.all(ordensServicoMock.map(o => buscarDadosCompletos(o)));
+  const response = await api.get<PaginatedResponse<any>>('/orcamentos', { params: { limit: 1000 } });
+  return response.data.data.map(mapearOrdem);
 };
 
 export const buscarOrdemServicoPorId = async (id: number): Promise<OrdemServico | null> => {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  const ordem = ordensServicoMock.find(o => o.id === id);
-  if (!ordem) return null;
-  return buscarDadosCompletos(ordem);
+  const response = await api.get(`/orcamentos/${id}`);
+  const orcamento = response.data.data || response.data;
+  return mapearOrdem(orcamento);
 };
 
 export const criarOrdemServico = async (dados: OrdemServicoFormData): Promise<OrdemServico> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  const novaOrdem: OrdemServico = {
-    id: Math.max(...ordensServicoMock.map(o => o.id), 0) + 1,
-    numeroOS: gerarNumeroOS(),
-    ...dados,
-    dataEntrada: new Date().toISOString().split('T')[0]
+  const payload = {
+    id_cliente: dados.clienteId,
+    id_veiculo: dados.veiculoId,
+    etapa: dados.status,
+    descricao: dados.servicosRealizar,
+    data_inicio: dados.dataEntrada,
+    data_termino: dados.dataPrevisao
   };
   
-  ordensServicoMock.push(novaOrdem);
-  return buscarDadosCompletos(novaOrdem);
+  const response = await api.post('/orcamentos', payload);
+  return mapearOrdem(response.data.data || response.data);
 };
 
 export const atualizarOrdemServico = async (id: number, dados: Partial<OrdemServicoFormData>): Promise<OrdemServico> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
+  const payload: any = {};
   
-  const index = ordensServicoMock.findIndex(o => o.id === id);
-  if (index === -1) throw new Error('Ordem de serviço não encontrada');
+  if (dados.status) payload.etapa = dados.status;
+  if (dados.servicosRealizar) payload.descricao = dados.servicosRealizar;
+  if (dados.dataPrevisao) payload.data_termino = dados.dataPrevisao;
+  if (dados.clienteId) payload.id_cliente = dados.clienteId;
+  if (dados.veiculoId) payload.id_veiculo = dados.veiculoId;
   
-  ordensServicoMock[index] = { ...ordensServicoMock[index], ...dados };
-  
-  if (dados.status === 'concluido') {
-    ordensServicoMock[index].dataConclusao = new Date().toISOString().split('T')[0];
-  }
-  
-  return buscarDadosCompletos(ordensServicoMock[index]);
+  const response = await api.put(`/orcamentos/${id}`, payload);
+  return mapearOrdem(response.data.data || response.data);
 };
 
 export const deletarOrdemServico = async (id: number): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  const index = ordensServicoMock.findIndex(o => o.id === id);
-  if (index === -1) throw new Error('Ordem de serviço não encontrada');
-  
-  ordensServicoMock.splice(index, 1);
+  await api.delete(`/orcamentos/${id}`);
 };

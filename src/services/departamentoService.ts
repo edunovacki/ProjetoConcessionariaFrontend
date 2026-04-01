@@ -1,5 +1,6 @@
 import { Departamento, DepartamentoFormData } from '../types/departamento';
 
+// Dados mockados para departamentos (enquanto o back-end não tem esse endpoint)
 let departamentosMock: Departamento[] = [
   {
     id: 1,

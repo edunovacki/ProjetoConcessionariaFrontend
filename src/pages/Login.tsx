@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { validarEmail } from '../utils/validations';
+import { login } from '../services/authService';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login: authLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erros, setErros] = useState<{ [key: string]: string }>({});
@@ -24,8 +25,6 @@ const Login: React.FC = () => {
     // Validação da senha
     if (!senha) {
       novosErros.senha = 'Senha é obrigatória';
-    } else if (senha.length < 6) {
-      novosErros.senha = 'Senha deve ter pelo menos 6 caracteres';
     }
 
     setErros(novosErros);
@@ -42,27 +41,19 @@ const Login: React.FC = () => {
     setCarregando(true);
 
     try {
-      // Simulando uma requisição à API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Simulando validação de credenciais
-      if (email === 'admin@concessionaria.com' && senha === '123456') {
-        const tokenSimulado = 'fake-jwt-token-123456';
-        const userData = {
-          id: 1,
-          nome: 'Administrador',
-          email: email,
-          cpf: '529.982.247-25',
-          telefone: '(11) 99999-9999'
-        };
-
-        login(tokenSimulado, userData);
-        navigate('/dashboard');
-      } else {
-        setErros({ submit: 'Email ou senha inválidos' });
-      }
-    } catch (error) {
-      setErros({ submit: 'Erro ao fazer login. Tente novamente.' });
+      const response = await login(email, senha);
+      
+      // Mapear para o formato esperado pelo contexto
+      const userData = {
+        id: response.usuario.id,
+        nome: response.usuario.nome,
+        email: response.usuario.email
+      };
+      
+      authLogin(response.token, userData);
+      navigate('/dashboard');
+    } catch (error: any) {
+      setErros({ submit: error.response?.data?.error || 'Erro ao fazer login. Tente novamente.' });
     } finally {
       setCarregando(false);
     }

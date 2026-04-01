@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { validarEmail, validarCPF, avaliarForcaSenha, formatarCPF } from '../utils/validations';
+import { cadastrarUsuario } from '../services/authService';
 import '../App.css';
 
 const Cadastro: React.FC = () => {
@@ -92,27 +93,21 @@ const Cadastro: React.FC = () => {
     setCarregando(true);
 
     try {
-      // Simular cadastro (depois substituir por chamada real à API)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simular sucesso no cadastro
-      console.log('Usuário cadastrado:', {
+      await cadastrarUsuario({
         nome,
         email,
-        cpf: cpf.replace(/[^\d]/g, ''),
-        senha
+        senha,
+        permissao: 'user'
       });
       
-      // Redirecionar para login com mensagem de sucesso
       alert('Cadastro realizado com sucesso! Faça seu login.');
       navigate('/');
-    } catch (error) {
-      setErros({ submit: 'Erro ao cadastrar. Tente novamente.' });
+    } catch (error: any) {
+      setErros({ submit: error.response?.data?.error || 'Erro ao cadastrar. Tente novamente.' });
     } finally {
       setCarregando(false);
     }
   };
-
 
   const getForcaCor = () => {
     if (!forcaSenha) return '#ddd';
