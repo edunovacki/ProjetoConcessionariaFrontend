@@ -1,8 +1,8 @@
 import React, { ReactNode } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom'; // ← useLocation importado
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartColumn, faUsers, faCar, faWrench, faUser, faSignOutAlt, } from '@fortawesome/free-solid-svg-icons';
+import { faChartColumn, faUsers, faCar, faWrench, faUser, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
 
 interface LayoutProps {
   children: ReactNode;
@@ -11,7 +11,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation(); // ← VARIÁVEL LOCATION CRIADA AQUI
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -30,7 +30,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             to="/dashboard"
             style={{
               ...styles.navLink,
-              ...(location.pathname === '/dashboard' ? styles.navLinkActive : {}) // ← USANDO LOCATION
+              ...(location.pathname === '/dashboard' ? styles.navLinkActive : {})
             }}
           >
             <FontAwesomeIcon icon={faChartColumn} style={{ marginRight: '10px' }} />
@@ -40,7 +40,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             to="/clientes"
             style={{
               ...styles.navLink,
-              ...(location.pathname === '/clientes' ? styles.navLinkActive : {}) // ← USANDO LOCATION
+              ...(location.pathname === '/clientes' ? styles.navLinkActive : {})
             }}
           >
             <FontAwesomeIcon icon={faUsers} style={{ marginRight: '10px' }} />
@@ -50,13 +50,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             to="/veiculos"
             style={{
               ...styles.navLink,
-              ...(location.pathname === '/veiculos' ? styles.navLinkActive : {}) // ← USANDO LOCATION
+              ...(location.pathname === '/veiculos' ? styles.navLinkActive : {})
             }}
           >
             <FontAwesomeIcon icon={faCar} style={{ marginRight: '10px' }} />
             Veículos
           </Link>
-          {/*<Link
+          <Link
             to="/ordens-servico"
             style={{
               ...styles.navLink,
@@ -65,12 +65,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           >
             <FontAwesomeIcon icon={faWrench} style={{ marginRight: '10px' }} />
             Ordens de Serviço
-          </Link>*/}
+          </Link>
           <Link
             to="/perfil"
             style={{
               ...styles.navLink,
-              ...(location.pathname === '/perfil' ? styles.navLinkActive : {}) // ← USANDO LOCATION
+              ...(location.pathname === '/perfil' ? styles.navLinkActive : {})
             }}
           >
             <FontAwesomeIcon icon={faUser} style={{ marginRight: '10px' }} />
@@ -165,19 +165,12 @@ const styles = {
     marginLeft: '250px',
     padding: '20px'
   },
-  header: {
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    marginBottom: '20px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-  },
   content: {
     backgroundColor: 'white',
     padding: '20px',
     borderRadius: '8px',
     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    minHeight: 'calc(100vh - 120px)'
+    minHeight: 'calc(100vh - 40px)'
   }
 };
 

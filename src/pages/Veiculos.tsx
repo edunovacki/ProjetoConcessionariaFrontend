@@ -51,9 +51,9 @@ const Veiculos: React.FC = () => {
       await deletarVeiculo(id);
       alert('Veículo deletado com sucesso!');
       carregarDados();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao deletar veículo:', error);
-      alert('Erro ao deletar veículo');
+      alert(error.response?.data?.error || 'Erro ao deletar veículo');
     } finally {
       setVeiculoDeletando(null);
     }
@@ -88,9 +88,6 @@ const Veiculos: React.FC = () => {
                 <th>ID</th>
                 <th>Placa</th>
                 <th>Modelo</th>
-                <th>Marca</th>
-                <th>Ano</th>
-                <th>Cor</th>
                 <th>Cliente</th>
                 <th>Ações</th>
               </tr>
@@ -101,10 +98,7 @@ const Veiculos: React.FC = () => {
                   <td>{veiculo.id}</td>
                   <td>{veiculo.placa}</td>
                   <td>{veiculo.modelo}</td>
-                  <td>{veiculo.marca}</td>
-                  <td>{veiculo.ano}</td>
-                  <td>{veiculo.cor}</td>
-                  <td>{clientes[veiculo.clienteId] || 'Cliente não encontrado'}</td>
+                  <td>{veiculo.id_cliente ? clientes[veiculo.id_cliente] || '-' : '-'}</td>
                   <td style={styles.acoes}>
                     <button
                       onClick={() => handleEditar(veiculo.id)}
@@ -181,6 +175,7 @@ const styles = {
   },
   buttonNovoEmpty: {
     backgroundColor: '#28a745',
+    fontFamily: "Arial, Helvetica, sans-serif",
     color: 'white',
     padding: '10px 20px',
     border: 'none',
@@ -192,22 +187,27 @@ const styles = {
   table: {
     width: '100%',
     borderCollapse: 'collapse' as const,
-    backgroundColor: 'white'
+    fontFamily: "Arial, Helvetica, sans-serif",
+    backgroundColor: 'white',
+    textAlign: 'center' as const
   },
   loading: {
     textAlign: 'center' as const,
+    fontFamily: "Arial, Helvetica, sans-serif",
     padding: '40px',
     fontSize: '18px',
     color: '#666'
   },
   emptyState: {
     textAlign: 'center' as const,
+    fontFamily: "Arial, Helvetica, sans-serif",
     padding: '40px',
     color: '#666'
   },
   acoes: {
     display: 'flex',
-    gap: '10px'
+    gap: '10px',
+    justifyContent: 'center'
   },
   buttonEditar: {
     backgroundColor: '#007bff',

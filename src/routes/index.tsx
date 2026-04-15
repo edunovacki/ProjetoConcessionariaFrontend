@@ -94,7 +94,7 @@ const AppRoutes: React.FC = () => {
               </ProtectedRoute>
             } 
           />
-          {/*<Route 
+          <Route 
             path="/ordens-servico" 
             element={
               <ProtectedRoute>
@@ -103,7 +103,7 @@ const AppRoutes: React.FC = () => {
                 </Layout>
               </ProtectedRoute>
             } 
-          />*/}
+          />
           <Route 
             path="/ordens-servico/novo" 
             element={

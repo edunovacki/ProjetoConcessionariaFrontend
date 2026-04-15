@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listarClientes, deletarCliente } from '../services/clienteService';
 import { Cliente } from '../types/cliente';
+import { formatarCPF } from '../utils/validations'; // ← ADICIONAR
+import { text } from 'stream/consumers';
 
 const Clientes: React.FC = () => {
   const navigate = useNavigate();
@@ -12,7 +14,14 @@ const Clientes: React.FC = () => {
   const [clienteDeletando, setClienteDeletando] = useState<number | null>(null);
   const itensPorPagina = 5;
 
-  // Carregar clientes ao montar o componente ou quando a página mudar
+  const formatarCNH = (cnh: string | null): string => {
+    if (!cnh) return '-';
+ 
+    const numeros = cnh.replace(/\D/g, '');
+    if (numeros.length === 0) return '-';
+    return numeros;
+  };
+
   useEffect(() => {
     carregarClientes();
   }, [pagina]);
@@ -40,11 +49,10 @@ const Clientes: React.FC = () => {
     try {
       await deletarCliente(id);
       alert('Cliente deletado com sucesso!');
-      // Recarregar a lista
       carregarClientes();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao deletar cliente:', error);
-      alert('Erro ao deletar cliente');
+      alert(error.response?.data?.error || 'Erro ao deletar cliente');
     } finally {
       setClienteDeletando(null);
     }
@@ -58,7 +66,6 @@ const Clientes: React.FC = () => {
     navigate('/clientes/novo');
   };
 
-  // Calcular total de páginas
   const totalPaginas = Math.ceil(total / itensPorPagina);
 
   return (
@@ -79,10 +86,9 @@ const Clientes: React.FC = () => {
               <tr>
                 <th>ID</th>
                 <th>Nome</th>
-                <th>Email</th>
                 <th>Telefone</th>
                 <th>CPF</th>
-                <th>Data Cadastro</th>
+                <th>CNH</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -91,10 +97,9 @@ const Clientes: React.FC = () => {
                 <tr key={cliente.id}>
                   <td>{cliente.id}</td>
                   <td>{cliente.nome}</td>
-                  <td>{cliente.email}</td>
-                  <td>{cliente.telefone}</td>
-                  <td>{cliente.cpf}</td>
-                  <td>{new Date(cliente.dataCadastro).toLocaleDateString('pt-BR')}</td>
+                  <td>{cliente.telefone || '-'}</td>
+                  <td>{cliente.cpf ? formatarCPF(cliente.cpf) : '-'}</td>  {/* ← FORMATADO */}
+                  <td>{formatarCNH(cliente.cnh)}</td>  {/* ← APENAS NÚMEROS */}
                   <td style={styles.acoes}>
                     <button
                       onClick={() => handleEditar(cliente.id)}
@@ -109,13 +114,21 @@ const Clientes: React.FC = () => {
                     >
                       {clienteDeletando === cliente.id ? 'Deletando...' : 'Deletar'}
                     </button>
-                  </td>
-                </tr>
+                   </td>
+                 </tr>
               ))}
             </tbody>
           </table>
 
-          {/* Paginação */}
+          {clientes.length === 0 && (
+            <div style={styles.emptyState}>
+              <p>Nenhum cliente cadastrado.</p>
+              <button onClick={handleNovo} style={styles.buttonNovoEmpty}>
+                Cadastrar primeiro cliente
+              </button>
+            </div>
+          )}
+
           {totalPaginas > 1 && (
             <div style={styles.paginacao}>
               <button
@@ -154,6 +167,7 @@ const styles = {
   },
   buttonNovo: {
     backgroundColor: '#28a745',
+    fontFamily: "Arial, Helvetica, sans-serif",
     color: 'white',
     padding: '10px 20px',
     border: 'none',
@@ -161,20 +175,41 @@ const styles = {
     cursor: 'pointer',
     fontSize: '14px'
   },
+  buttonNovoEmpty: {
+    backgroundColor: '#28a745',
+    fontFamily: "Arial, Helvetica, sans-serif",
+    color: 'white',
+    padding: '10px 20px',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    marginTop: '10px'
+  },
   table: {
     width: '100%',
     borderCollapse: 'collapse' as const,
-    backgroundColor: 'white'
+    fontFamily: "Arial, Helvetica, sans-serif",
+    backgroundColor: 'white',
+    textAlign: 'center' as const
   },
   loading: {
     textAlign: 'center' as const,
+    fontFamily: "Arial, Helvetica, sans-serif",
     padding: '40px',
     fontSize: '18px',
     color: '#666'
   },
+  emptyState: {
+    textAlign: 'center' as const,
+    fontFamily: "Arial, Helvetica, sans-serif",
+    padding: '40px',
+    color: '#666'
+  },
   acoes: {
     display: 'flex',
-    gap: '10px'
+    gap: '10px',
+    justifyContent: 'center'
   },
   buttonEditar: {
     backgroundColor: '#007bff',

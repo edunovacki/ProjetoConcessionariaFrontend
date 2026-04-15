@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { validarEmail, validarCPF, avaliarForcaSenha, formatarCPF } from '../utils/validations';
 import { cadastrarUsuario } from '../services/authService';
-import '../App.css';
+
 
 const Cadastro: React.FC = () => {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ const Cadastro: React.FC = () => {
   const [carregando, setCarregando] = useState(false);
   const [forcaSenha, setForcaSenha] = useState<{ forca: string; mensagem: string; pontos: number } | null>(null);
 
-  // Função para lidar com a mudança da senha e avaliar força
+
   const handleSenhaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const novaSenha = e.target.value;
     setSenha(novaSenha);
@@ -28,7 +28,7 @@ const Cadastro: React.FC = () => {
     }
   };
 
-  // Função para lidar com a mudança do CPF (formatando)
+
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const cpfFormatado = formatarCPF(e.target.value);
     setCpf(cpfFormatado);
@@ -37,21 +37,18 @@ const Cadastro: React.FC = () => {
   const validarFormulario = (): boolean => {
     const novosErros: { [key: string]: string } = {};
 
-    // Validação do nome
     if (!nome.trim()) {
       novosErros.nome = 'Nome é obrigatório';
     } else if (nome.trim().length < 3) {
       novosErros.nome = 'Nome deve ter pelo menos 3 caracteres';
     }
 
-    // Validação do email
     if (!email) {
       novosErros.email = 'Email é obrigatório';
     } else if (!validarEmail(email)) {
       novosErros.email = 'Digite um email válido (ex: nome@gmail.com)';
     }
 
-    // Validação do CPF
     if (!cpf) {
       novosErros.cpf = 'CPF é obrigatório';
     } else {
@@ -63,7 +60,6 @@ const Cadastro: React.FC = () => {
       }
     }
 
-    // Validação da senha
     if (!senha) {
       novosErros.senha = 'Senha é obrigatória';
     } else if (senha.length < 6) {
@@ -72,7 +68,6 @@ const Cadastro: React.FC = () => {
       novosErros.senha = forcaSenha.mensagem;
     }
 
-    // Validação da confirmação de senha
     if (!confirmarSenha) {
       novosErros.confirmarSenha = 'Confirme sua senha';
     } else if (senha !== confirmarSenha) {
@@ -93,11 +88,13 @@ const Cadastro: React.FC = () => {
     setCarregando(true);
 
     try {
+      const cpfNumerico = cpf.replace(/[^\d]/g, '');
+      
       await cadastrarUsuario({
         nome,
         email,
         senha,
-        permissao: 'user'
+        cpf: cpfNumerico
       });
       
       alert('Cadastro realizado com sucesso! Faça seu login.');
@@ -139,7 +136,7 @@ const Cadastro: React.FC = () => {
               onChange={(e) => setNome(e.target.value)}
               style={{...styles.input, borderColor: erros.nome ? '#dc3545' : '#ddd'}}
               disabled={carregando}
-              placeholder="Nome Completo"
+              placeholder="Nome Completo *"
             />
             {erros.nome && <span style={styles.errorText}>{erros.nome}</span>}
           </div>
@@ -150,7 +147,7 @@ const Cadastro: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               style={{...styles.input, borderColor: erros.email ? '#dc3545' : '#ddd'}}
               disabled={carregando}
-              placeholder="E-mail"
+              placeholder="E-mail *"
             />
             {erros.email && <span style={styles.errorText}>{erros.email}</span>}
           </div>
@@ -162,10 +159,10 @@ const Cadastro: React.FC = () => {
               onChange={handleCpfChange}
               style={{...styles.input, borderColor: erros.cpf ? '#dc3545' : '#ddd'}}
               disabled={carregando}
-              placeholder="CPF"
+              placeholder="CPF *"
               maxLength={14}
             />
-            {erros.cpf && <span style={styles.errorText}>{erros.cpf}</span>}
+            {erros.cpf && <span style={styles.errorText}>{erros.cpf}</span>}  
           </div>
           
           <div style={styles.inputGroup}>
@@ -175,7 +172,7 @@ const Cadastro: React.FC = () => {
               onChange={handleSenhaChange}
               style={{...styles.input, borderColor: erros.senha ? '#dc3545' : '#ddd'}}
               disabled={carregando}
-              placeholder="Senha"
+              placeholder="Senha *"
             />
             
             {/* Indicador de força da senha */}
@@ -212,7 +209,7 @@ const Cadastro: React.FC = () => {
               onChange={(e) => setConfirmarSenha(e.target.value)}
               style={{...styles.input, borderColor: erros.confirmarSenha ? '#dc3545' : '#ddd'}}
               disabled={carregando}
-              placeholder="Confirmar Senha"
+              placeholder="Confirmar Senha *"
             />
             {erros.confirmarSenha && <span style={styles.errorText}>{erros.confirmarSenha}</span>}
           </div>
@@ -268,12 +265,6 @@ const styles = {
     flexDirection: 'column' as const,
     gap: '8px'
   },
-  label: {
-    fontSize: '14px',
-    fontFamily: "Arial, Helvetica, sans-serif",
-    fontWeight: 'bold',
-    color: '#333'
-  },
   input: {
     padding: '15px',
     border: '1px solid #ddd',
@@ -306,6 +297,12 @@ const styles = {
     color: '#dc3545',
     fontSize: '12px',
     fontFamily: "Arial, Helvetica, sans-serif",
+    marginTop: '4px'
+  },
+  helperText: {
+    fontSize: '11px',
+    fontFamily: "Arial, Helvetica, sans-serif",
+    color: '#666',
     marginTop: '4px'
   },
   forcaContainer: {

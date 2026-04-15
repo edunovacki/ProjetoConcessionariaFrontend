@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { validarCPF, validarEmail, formatarCPF, formatarTelefone, avaliarForcaSenha } from '../utils/validations';
+import { validarCPF, formatarCPF, formatarTelefone, avaliarForcaSenha } from '../utils/validations';
+import { buscarUsuarioLogado, alterarSenha } from '../services/authService';
 
 interface PerfilData {
   nome: string;
@@ -12,7 +13,7 @@ interface PerfilData {
 
 const Perfil: React.FC = () => {
   const navigate = useNavigate();
-  const { user, updateUser, logout } = useAuth();
+  const { user, updateUser } = useAuth();
   
   const [formData, setFormData] = useState<PerfilData>({
     nome: '',
@@ -24,23 +25,47 @@ const Perfil: React.FC = () => {
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmarNovaSenha, setConfirmarNovaSenha] = useState('');
-  const [alterarSenha, setAlterarSenha] = useState(false);
+  const [mostrarAlterarSenha, setMostrarAlterarSenha] = useState(false);
   
   const [erros, setErros] = useState<{ [key: string]: string }>({});
   const [carregando, setCarregando] = useState(false);
   const [mensagemSucesso, setMensagemSucesso] = useState('');
   const [forcaSenha, setForcaSenha] = useState<{ forca: string; mensagem: string; pontos: number } | null>(null);
 
-  // Carregar dados do usuário
+  // Carregar dados do usuário - BUSCA DIRETO DO BACK-END
   useEffect(() => {
-    if (user) {
-      setFormData({
-        nome: user.nome || '',
-        email: user.email || '',
-        cpf: user.cpf || '',
-        telefone: user.telefone || ''
-      });
-    }
+    const carregarDadosCompletos = async () => {
+      try {
+        const usuarioCompleto = await buscarUsuarioLogado();
+        if (usuarioCompleto) {
+          setFormData({
+            nome: usuarioCompleto.nome || '',
+            email: usuarioCompleto.email || '',
+            cpf: usuarioCompleto.cpf || '',
+            telefone: usuarioCompleto.telefone || ''
+          });
+        } else if (user) {
+          setFormData({
+            nome: user.nome || '',
+            email: user.email || '',
+            cpf: user.cpf || '',
+            telefone: user.telefone || ''
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados completos:', error);
+        if (user) {
+          setFormData({
+            nome: user.nome || '',
+            email: user.email || '',
+            cpf: user.cpf || '',
+            telefone: user.telefone || ''
+          });
+        }
+      }
+    };
+    
+    carregarDadosCompletos();
   }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,18 +106,13 @@ const Perfil: React.FC = () => {
   const validarFormulario = (): boolean => {
     const novosErros: { [key: string]: string } = {};
 
-    // Validação do nome
-    if (!formData.nome.trim()) {
+    if (!formData.nome || !formData.nome.trim()) {
       novosErros.nome = 'Nome é obrigatório';
     } else if (formData.nome.trim().length < 3) {
       novosErros.nome = 'Nome deve ter pelo menos 3 caracteres';
     }
 
-    // Validação do email (não pode alterar)
-    // Email não é editável, então não validamos
-
-    // Validação do CPF
-    if (formData.cpf) {
+    if (formData.cpf && formData.cpf.trim()) {
       const cpfNumerico = formData.cpf.replace(/[^\d]/g, '');
       if (cpfNumerico.length !== 11 && cpfNumerico.length > 0) {
         novosErros.cpf = 'CPF deve ter 11 dígitos';
@@ -101,8 +121,7 @@ const Perfil: React.FC = () => {
       }
     }
 
-    // Validação da senha
-    if (alterarSenha) {
+    if (mostrarAlterarSenha) {
       if (!senhaAtual) {
         novosErros.senhaAtual = 'Senha atual é obrigatória';
       }
@@ -137,49 +156,40 @@ const Perfil: React.FC = () => {
     setMensagemSucesso('');
 
     try {
-      // Simular atualização (depois substituir por chamada real à API)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Atualizar dados do usuário no contexto
       const dadosAtualizados: any = {
         nome: formData.nome,
         cpf: formData.cpf,
         telefone: formData.telefone
       };
       
-      // Se estiver alterando senha
-      if (alterarSenha) {
-        // Aqui você faria a chamada para alterar senha na API
-        console.log('Alterando senha...');
-        dadosAtualizados.senhaAlterada = true;
-      }
-      
       updateUser(dadosAtualizados);
       
-      setMensagemSucesso('Perfil atualizado com sucesso!');
+      if (mostrarAlterarSenha && user) {
+        await alterarSenha(user.id, senhaAtual, novaSenha);
+        setMensagemSucesso('Perfil e senha atualizados com sucesso!');
+        
+        setSenhaAtual('');
+        setNovaSenha('');
+        setConfirmarNovaSenha('');
+        setMostrarAlterarSenha(false);
+        setForcaSenha(null);
+      } else {
+        setMensagemSucesso('Perfil atualizado com sucesso!');
+      }
       
-      // Limpar campos de senha
-      setSenhaAtual('');
-      setNovaSenha('');
-      setConfirmarNovaSenha('');
-      setAlterarSenha(false);
-      setForcaSenha(null);
-      
-      // Limpar mensagem após 3 segundos
       setTimeout(() => {
         setMensagemSucesso('');
       }, 3000);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao atualizar perfil:', error);
-      setErros({ submit: 'Erro ao atualizar perfil. Tente novamente.' });
+      setErros({ submit: error.response?.data?.error || 'Erro ao atualizar perfil. Tente novamente.' });
     } finally {
       setCarregando(false);
     }
   };
 
   const handleCancelar = () => {
-    // Recarregar dados originais
     if (user) {
       setFormData({
         nome: user.nome || '',
@@ -188,7 +198,7 @@ const Perfil: React.FC = () => {
         telefone: user.telefone || ''
       });
     }
-    setAlterarSenha(false);
+    setMostrarAlterarSenha(false);
     setSenhaAtual('');
     setNovaSenha('');
     setConfirmarNovaSenha('');
@@ -283,6 +293,7 @@ const Perfil: React.FC = () => {
               style={{...styles.input, borderColor: erros.telefone ? '#dc3545' : '#ddd'}}
               disabled={carregando}
               placeholder="(11) 99999-9999"
+              maxLength={15}
             />
           </div>
         </div>
@@ -293,14 +304,14 @@ const Perfil: React.FC = () => {
             <h3 style={styles.sectionTitle}>Alterar Senha</h3>
             <button
               type="button"
-              onClick={() => setAlterarSenha(!alterarSenha)}
+              onClick={() => setMostrarAlterarSenha(!mostrarAlterarSenha)}
               style={styles.buttonToggle}
             >
-              {alterarSenha ? 'Cancelar alteração' : 'Alterar senha'}
+              {mostrarAlterarSenha ? 'Cancelar alteração' : 'Alterar senha'}
             </button>
           </div>
 
-          {alterarSenha && (
+          {mostrarAlterarSenha && (
             <>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Senha Atual:*</label>
@@ -398,6 +409,7 @@ const styles = {
   },
   subtitle: {
     fontSize: '14px',
+    fontFamily: "Arial, Helvetica, sans-serif",
     color: '#666',
     marginBottom: '24px'
   },
@@ -441,6 +453,7 @@ const styles = {
   label: {
     fontSize: '14px',
     fontWeight: 'bold',
+    fontFamily: "Arial, Helvetica, sans-serif",
     color: '#333'
   },
   input: {
@@ -452,17 +465,20 @@ const styles = {
   },
   helperText: {
     fontSize: '11px',
+    fontFamily: "Arial, Helvetica, sans-serif",
     color: '#666',
     marginTop: '4px'
   },
   errorText: {
     color: '#dc3545',
+    fontFamily: "Arial, Helvetica, sans-serif",
     fontSize: '12px',
     marginTop: '4px'
   },
   sucesso: {
     backgroundColor: '#d4edda',
     color: '#155724',
+    fontFamily: "Arial, Helvetica, sans-serif",
     padding: '12px',
     borderRadius: '4px',
     marginBottom: '20px',
@@ -482,6 +498,7 @@ const styles = {
   forcaLabels: {
     display: 'flex',
     justifyContent: 'space-between',
+    fontFamily: "Arial, Helvetica, sans-serif",
     marginBottom: '4px'
   },
   forcaLabel: {
@@ -490,6 +507,7 @@ const styles = {
   },
   forcaTexto: {
     fontSize: '12px',
+    fontFamily: "Arial, Helvetica, sans-serif",
     fontWeight: 'bold'
   },
   forcaBarraBg: {
@@ -505,6 +523,7 @@ const styles = {
   forcaMensagem: {
     fontSize: '11px',
     color: '#666',
+    fontFamily: "Arial, Helvetica, sans-serif",
     marginTop: '4px',
     display: 'block'
   },

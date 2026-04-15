@@ -4,6 +4,8 @@ import { listarOrdensServico, deletarOrdemServico } from '../services/ordemServi
 import { listarDepartamentos } from '../services/departamentoService';
 import { OrdemServico } from '../types/ordemServico';
 import { Departamento } from '../types/departamento';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEdit, faTrashAlt, faUser, faPhone, faCalendarAlt, faClock } from '@fortawesome/free-solid-svg-icons';
 
 const OrdensServico: React.FC = () => {
   const navigate = useNavigate();
@@ -12,18 +14,24 @@ const OrdensServico: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filtroDepartamento, setFiltroDepartamento] = useState<number>(0);
   const [filtroStatus, setFiltroStatus] = useState<string>('todas');
+  const [busca, setBusca] = useState<string>('');
   const [pagina, setPagina] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [totalOrdensLista, setTotalOrdensLista] = useState(0);
   const [ordemDeletando, setOrdemDeletando] = useState<number | null>(null);
-  const itensPorPagina = 6;
+  const itensPorPagina = 4;
 
   useEffect(() => {
     carregarDepartamentos();
   }, []);
 
   useEffect(() => {
+    setPagina(1);
     carregarOrdens();
-  }, [pagina, filtroDepartamento, filtroStatus]);
+  }, [busca, filtroDepartamento, filtroStatus]);
+
+  useEffect(() => {
+    carregarOrdens();
+  }, [pagina]);
 
   const carregarDepartamentos = async () => {
     try {
@@ -41,10 +49,11 @@ const OrdensServico: React.FC = () => {
         pagina,
         itensPorPagina,
         filtroDepartamento,
-        filtroStatus
+        filtroStatus,
+        busca
       );
       setOrdens(response.dados);
-      setTotal(response.total);
+      setTotalOrdensLista(response.total);
     } catch (error) {
       console.error('Erro ao carregar ordens de serviço:', error);
       alert('Erro ao carregar lista de ordens de serviço');
@@ -63,9 +72,9 @@ const OrdensServico: React.FC = () => {
       await deletarOrdemServico(id);
       alert('Ordem de serviço deletada com sucesso!');
       carregarOrdens();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao deletar ordem:', error);
-      alert('Erro ao deletar ordem de serviço');
+      alert(error.response?.data?.error || 'Erro ao deletar ordem de serviço');
     } finally {
       setOrdemDeletando(null);
     }
@@ -80,8 +89,8 @@ const OrdensServico: React.FC = () => {
   };
 
   const getStatusColor = (status: string) => {
-    switch(status) {
-      case 'recepcao': return '#17a2b8';
+    switch (status) {
+      case 'orçamento': return '#17a2b8';
       case 'em_andamento': return '#ffc107';
       case 'concluido': return '#28a745';
       case 'aguardando_retirada': return '#dc3545';
@@ -90,8 +99,8 @@ const OrdensServico: React.FC = () => {
   };
 
   const getStatusTexto = (status: string) => {
-    switch(status) {
-      case 'recepcao': return 'Recepção';
+    switch (status) {
+      case 'orçamento': return 'Orçamento';
       case 'em_andamento': return 'Em Andamento';
       case 'concluido': return 'Concluído';
       case 'aguardando_retirada': return 'Aguardando Retirada';
@@ -100,16 +109,18 @@ const OrdensServico: React.FC = () => {
   };
 
   const formatarData = (data: string) => {
-    return new Date(data).toLocaleDateString('pt-BR');
+    if (!data) return '';
+    const [ano, mes, dia] = data.split('T')[0].split('-');
+    return `${dia}/${mes}/${ano}`;
   };
 
-  const totalPaginas = Math.ceil(total / itensPorPagina);
+  const totalPaginas = Math.ceil(totalOrdensLista / itensPorPagina);
 
   return (
     <div>
       <div style={styles.header}>
         <div>
-          <h2 style={styles.title}>Gestão de Serviço</h2>
+          <h2 style={styles.title}>Gestão de Funilaria</h2>
           <p style={styles.subtitle}>Acompanhe todos os veículos em tempo real</p>
         </div>
         <button onClick={handleNovo} style={styles.buttonNovo}>
@@ -118,40 +129,47 @@ const OrdensServico: React.FC = () => {
       </div>
 
       {/* Filtros */}
-      <div style={styles.filtros}>
+      <div style={styles.filtrosContainer}>
         <div style={styles.filtroGroup}>
-          <label style={styles.filtroLabel}>Filtrar por Departamento:</label>
+          <label style={styles.filtroLabel}>FILTRAR POR ETAPA:</label>
           <select
-            value={filtroDepartamento}
-            onChange={(e) => {
-              setFiltroDepartamento(parseInt(e.target.value));
-              setPagina(1);
-            }}
+            value={filtroStatus}
+            onChange={(e) => { setFiltroStatus(e.target.value); setPagina(1); }}
             style={styles.select}
           >
-            <option value={0}>Todos</option>
+            <option value="todas">TODAS</option>
+            <option value="orçamento">ORÇAMENTO</option>
+            <option value="em_andamento">EM ANDAMENTO</option>
+            <option value="concluido">CONCLUÍDO</option>
+            <option value="aguardando_retirada">AGUARDANDO RETIRADA</option>
+          </select>
+        </div>
+
+        <div style={styles.filtroGroup}>
+          <label style={styles.filtroLabel}>FILTRAR POR DEPARTAMENTO:</label>
+          <select
+            value={filtroDepartamento}
+            onChange={(e) => { setFiltroDepartamento(parseInt(e.target.value)); setPagina(1); }}
+            style={styles.select}
+          >
+            <option value={0}>TODOS</option>
             {departamentos.map(dept => (
-              <option key={dept.id} value={dept.id}>{dept.nome}</option>
+              <option key={dept.id} value={dept.id}>
+                {dept.nome}
+              </option>
             ))}
           </select>
         </div>
 
         <div style={styles.filtroGroup}>
-          <label style={styles.filtroLabel}>Filtrar por Status:</label>
-          <select
-            value={filtroStatus}
-            onChange={(e) => {
-              setFiltroStatus(e.target.value);
-              setPagina(1);
-            }}
-            style={styles.select}
-          >
-            <option value="todas">Todas</option>
-            <option value="recepcao">Recepção</option>
-            <option value="em_andamento">Em Andamento</option>
-            <option value="concluido">Concluído</option>
-            <option value="aguardando_retirada">Aguardando Retirada</option>
-          </select>
+          <label style={styles.filtroLabel}>BUSCAR:</label>
+          <input
+            type="text"
+            placeholder="Placa, modelo, cliente..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            style={styles.searchInput}
+          />
         </div>
       </div>
 
@@ -159,86 +177,67 @@ const OrdensServico: React.FC = () => {
         <div style={styles.loading}>Carregando ordens de serviço...</div>
       ) : (
         <>
-          <div style={styles.grid}>
+          <div style={styles.cardsGrid}>
             {ordens.map((ordem) => (
-              <div key={ordem.id} style={styles.card}>
+              <div key={ordem.id} style={styles.cardOS}>
                 <div style={styles.cardHeader}>
-                  <div style={styles.placaModelo}>
-                    <span style={styles.placa}>{ordem.placa}</span>
-                    <span style={styles.modelo}>{ordem.modelo} - {ordem.ano}</span>
+                  <div>
+                    <div style={styles.placa}>{ordem.placa}</div>
+                    <div style={styles.modelo}>{ordem.modelo}</div>
                   </div>
-                  <span style={{
-                    ...styles.statusBadge,
-                    backgroundColor: getStatusColor(ordem.status)
-                  }}>
-                    {getStatusTexto(ordem.status)}
-                  </span>
+                  <div style={styles.cardActions}>
+                    <button onClick={() => handleEditar(ordem.id)} style={styles.editBtn}>
+                      <FontAwesomeIcon icon={faEdit} />
+                    </button>
+                    <button onClick={() => handleDeletar(ordem.id)} style={styles.deleteBtn} disabled={ordemDeletando === ordem.id}>
+                      <FontAwesomeIcon icon={faTrashAlt} spin={ordemDeletando === ordem.id} />
+                    </button>
+                  </div>
                 </div>
 
-                <div style={styles.cardContent}>
-                  <div style={styles.clienteInfo}>
-                    <strong>{ordem.cliente?.nome || 'Cliente não encontrado'}</strong>
-                    <span style={styles.telefone}>{ordem.cliente?.telefone}</span>
+                <div style={styles.clienteInfo}>
+                  <FontAwesomeIcon icon={faUser} style={styles.iconSmall} />
+                  <strong>{ordem.cliente?.nome || 'Cliente não encontrado'}</strong>
+                  <div style={styles.telefone}>
+                    <FontAwesomeIcon icon={faPhone} style={styles.iconTiny} />
+                    {ordem.cliente?.telefone || 'Sem telefone'}
+                  </div>
+                </div>
+
+                <div style={styles.detalhesServico}>
+                  <div style={styles.dataInfo}>
+                    <div>
+                      <FontAwesomeIcon icon={faCalendarAlt} style={styles.iconTiny} />
+                      <span style={styles.dataLabel}>ENTRADA</span>
+                      <div>{formatarData(ordem.dataEntrada)}</div>
+                    </div>
+                    <div>
+                      <FontAwesomeIcon icon={faClock} style={styles.iconTiny} />
+                      <span style={styles.dataLabel}>PREVISÃO</span>
+                      <div>{formatarData(ordem.dataPrevisao)}</div>
+                    </div>
                   </div>
 
-                  <div style={styles.detalhes}>
-                    <div style={styles.detalheItem}>
-                      <span style={styles.detalheLabel}>Departamento:</span>
-                      <span style={{
-                        ...styles.departamentoBadge,
-                        backgroundColor: ordem.departamento?.cor || '#6c757d'
-                      }}>
-                        {ordem.departamento?.nome || 'Não definido'}
-                      </span>
-                    </div>
-                    
-                    <div style={styles.detalheItem}>
-                      <span style={styles.detalheLabel}>Data Entrada:</span>
-                      <span>{formatarData(ordem.dataEntrada)}</span>
-                    </div>
-                    
-                    <div style={styles.detalheItem}>
-                      <span style={styles.detalheLabel}>Previsão:</span>
-                      <span>{formatarData(ordem.dataPrevisao)}</span>
-                    </div>
-                    
-                    <div style={styles.detalheItem}>
-                      <span style={styles.detalheLabel}>Tempo Decorrido:</span>
-                      <span style={styles.tempoDecorrido}>{ordem.tempoDecorrido} dias</span>
-                    </div>
+                  <div style={styles.departamentoInfo}>
+                    <strong>Departamento:</strong> {ordem.departamento?.nome || 'Funilaria'}
                   </div>
 
                   <div style={styles.servicos}>
-                    <strong>Serviços a realizar:</strong>
-                    <p>{ordem.servicosRealizar}</p>
-                  </div>
-
-                  {ordem.observacoes && (
-                    <div style={styles.observacoes}>
-                      <strong>Observações:</strong>
-                      <p>{ordem.observacoes}</p>
-                    </div>
-                  )}
-
-                  <div style={styles.consultor}>
-                    <span>Consultor: {ordem.consultorResponsavel}</span>
+                    <strong>Serviços:</strong>
+                    <p>{ordem.servicosRealizar || 'Não informado'}</p>
                   </div>
                 </div>
 
-                <div style={styles.cardActions}>
-                  <button
-                    onClick={() => handleEditar(ordem.id)}
-                    style={styles.buttonEditar}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleDeletar(ordem.id)}
-                    style={styles.buttonDeletar}
-                    disabled={ordemDeletando === ordem.id}
-                  >
-                    {ordemDeletando === ordem.id ? 'Deletando...' : 'Deletar'}
-                  </button>
+                <div style={styles.cardFooter}>
+                  <div style={styles.consultor}>
+                    CONSULTOR: {ordem.consultorResponsavel}
+                  </div>
+                  <div style={{
+                    ...styles.statusBadge,
+                    backgroundColor: getStatusColor(ordem.status)
+                  }}>
+                    {getStatusTexto(ordem.status).toUpperCase()}
+                  </div>
                 </div>
               </div>
             ))}
@@ -260,19 +259,17 @@ const OrdensServico: React.FC = () => {
                 disabled={pagina === 1}
                 style={styles.buttonPagina}
               >
-                Anterior
+                ANTERIOR
               </button>
-              
               <span style={styles.paginaInfo}>
-                Página {pagina} de {totalPaginas} ({total} ordens)
+                PÁGINA {pagina} DE {totalPaginas}
               </span>
-              
               <button
                 onClick={() => setPagina(pagina + 1)}
                 disabled={pagina === totalPaginas}
                 style={styles.buttonPagina}
               >
-                Próxima
+                PRÓXIMA
               </button>
             </div>
           )}
@@ -298,6 +295,7 @@ const styles = {
   },
   subtitle: {
     fontSize: '14px',
+    fontFamily: "Arial, Helvetica, sans-serif",
     color: '#666'
   },
   buttonNovo: {
@@ -312,6 +310,7 @@ const styles = {
   },
   buttonNovoEmpty: {
     backgroundColor: '#28a745',
+    fontFamily: "Arial, Helvetica, sans-serif",
     color: 'white',
     padding: '10px 20px',
     border: 'none',
@@ -320,8 +319,9 @@ const styles = {
     fontSize: '14px',
     marginTop: '10px'
   },
-  filtros: {
+  filtrosContainer: {
     display: 'flex',
+    fontFamily: "Arial, Helvetica, sans-serif",
     gap: '20px',
     marginBottom: '24px',
     flexWrap: 'wrap' as const,
@@ -333,10 +333,12 @@ const styles = {
   filtroGroup: {
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '8px'
+    gap: '8px',
+    minWidth: '180px'
   },
   filtroLabel: {
     fontSize: '12px',
+    fontFamily: "Arial, Helvetica, sans-serif",
     fontWeight: 'bold',
     color: '#666'
   },
@@ -345,158 +347,153 @@ const styles = {
     border: '1px solid #ddd',
     borderRadius: '4px',
     fontSize: '14px',
-    backgroundColor: 'white',
-    minWidth: '150px'
+    backgroundColor: 'white'
   },
-  grid: {
+  searchInput: {
+    padding: '8px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '14px',
+    backgroundColor: 'white'
+  },
+  cardsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
     gap: '20px',
     marginBottom: '24px'
   },
-  card: {
-    backgroundColor: 'white',
+  cardOS: {
+    backgroundColor: '#f8f9fa',
     borderRadius: '12px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
     overflow: 'hidden',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    ':hover': {
-      transform: 'translateY(-2px)',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-    }
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    transition: 'transform 0.2s'
   },
   cardHeader: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#fff',
     padding: '16px',
     borderBottom: '1px solid #e9ecef',
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  placaModelo: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '4px'
+    alignItems: 'flex-start'
   },
   placa: {
     fontSize: '20px',
     fontWeight: 'bold',
-    color: '#333'
+    color: '#2c3e50',
+    fontFamily: "Arial, Helvetica, sans-serif",
   },
   modelo: {
     fontSize: '14px',
-    color: '#666'
+    color: '#7f8c8d',
+    fontFamily: "Arial, Helvetica, sans-serif",
+    marginTop: '4px'
+  },
+  cardActions: {
+    display: 'flex',
+    gap: '8px'
+  },
+  editBtn: {
+    backgroundColor: 'transparent',
+    border: 'none',
+    fontSize: '16px',
+    cursor: 'pointer',
+    padding: '4px',
+    color: '#3498db'
+  },
+  deleteBtn: {
+    backgroundColor: 'transparent',
+    border: 'none',
+    fontSize: '16px',
+    cursor: 'pointer',
+    padding: '4px',
+    color: '#e74c3c'
+  },
+  clienteInfo: {
+    padding: '16px',
+    borderBottom: '1px solid #e9ecef',
+    fontFamily: "Arial, Helvetica, sans-serif",
+    backgroundColor: '#fff'
+  },
+  telefone: {
+    fontSize: '12px',
+    color: '#7f8c8d',
+    marginTop: '4px'
+  },
+  detalhesServico: {
+    padding: '16px',
+    fontFamily: "Arial, Helvetica, sans-serif",
+    backgroundColor: '#fff'
+  },
+  dataInfo: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '12px',
+    marginBottom: '12px',
+    paddingBottom: '12px',
+    borderBottom: '1px solid #e9ecef',
+    textAlign: 'center' as const
+  },
+  dataLabel: {
+    fontSize: '10px',
+    color: '#95a5a6',
+    fontWeight: 'bold',
+    letterSpacing: '0.5px',
+    marginLeft: '4px',
+    display: 'block'
+  },
+  departamentoInfo: {
+    fontSize: '13px',
+    color: '#2c3e50',
+    marginBottom: '12px',
+    padding: '8px',
+    backgroundColor: '#e9ecef',
+    borderRadius: '8px',
+    textAlign: 'center' as const
+  },
+  servicos: {
+    fontSize: '13px',
+    color: '#2c3e50',
+    lineHeight: '1.5',
+    backgroundColor: '#f8f9fa',
+    padding: '12px',
+    borderRadius: '8px'
+  },
+  cardFooter: {
+    padding: '12px 16px',
+    borderTop: '1px solid #e9ecef',
+    backgroundColor: '#fff',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  consultor: {
+    fontSize: '11px',
+    fontFamily: "Arial, Helvetica, sans-serif",
+    color: '#7f8c8d',
+    fontWeight: 'bold'
   },
   statusBadge: {
     padding: '4px 12px',
     borderRadius: '20px',
     color: 'white',
-    fontSize: '12px',
+    fontFamily: "Arial, Helvetica, sans-serif",
+    fontSize: '10px',
     fontWeight: 'bold'
-  },
-  cardContent: {
-    padding: '16px'
-  },
-  clienteInfo: {
-    marginBottom: '16px',
-    paddingBottom: '12px',
-    borderBottom: '1px solid #e9ecef',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  telefone: {
-    color: '#666',
-    fontSize: '12px'
-  },
-  detalhes: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '12px',
-    marginBottom: '16px'
-  },
-  detalheItem: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '4px'
-  },
-  detalheLabel: {
-    fontSize: '11px',
-    color: '#999',
-    textTransform: 'uppercase' as const
-  },
-  departamentoBadge: {
-    padding: '2px 8px',
-    borderRadius: '4px',
-    color: 'white',
-    fontSize: '11px',
-    fontWeight: 'bold',
-    display: 'inline-block',
-    width: 'fit-content'
-  },
-  tempoDecorrido: {
-    fontWeight: 'bold',
-    color: '#ffc107'
-  },
-  servicos: {
-    backgroundColor: '#f8f9fa',
-    padding: '12px',
-    borderRadius: '8px',
-    marginBottom: '12px'
-  },
-  observacoes: {
-    backgroundColor: '#fff3cd',
-    padding: '12px',
-    borderRadius: '8px',
-    marginBottom: '12px',
-    fontSize: '13px'
-  },
-  consultor: {
-    fontSize: '12px',
-    color: '#666',
-    textAlign: 'right' as const,
-    borderTop: '1px solid #e9ecef',
-    paddingTop: '12px',
-    marginTop: '8px'
-  },
-  cardActions: {
-    display: 'flex',
-    gap: '10px',
-    padding: '12px 16px',
-    borderTop: '1px solid #e9ecef',
-    backgroundColor: '#f8f9fa'
-  },
-  buttonEditar: {
-    flex: 1,
-    backgroundColor: '#007bff',
-    color: 'white',
-    padding: '8px',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px'
-  },
-  buttonDeletar: {
-    flex: 1,
-    backgroundColor: '#dc3545',
-    color: 'white',
-    padding: '8px',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px'
-  },
-  loading: {
-    textAlign: 'center' as const,
-    padding: '40px',
-    fontSize: '18px',
-    color: '#666'
   },
   emptyState: {
     textAlign: 'center' as const,
+    fontFamily: "Arial, Helvetica, sans-serif",
     padding: '60px',
     backgroundColor: 'white',
     borderRadius: '8px',
+    color: '#666'
+  },
+  loading: {
+    textAlign: 'center' as const,
+    fontFamily: "Arial, Helvetica, sans-serif",
+    padding: '40px',
+    fontSize: '18px',
     color: '#666'
   },
   paginacao: {
@@ -519,6 +516,15 @@ const styles = {
   paginaInfo: {
     fontSize: '14px',
     color: '#666'
+  },
+  iconSmall: {
+    marginRight: '8px',
+    color: '#7f8c8d'
+  },
+  iconTiny: {
+    marginRight: '4px',
+    fontSize: '10px',
+    color: '#95a5a6'
   }
 };
 

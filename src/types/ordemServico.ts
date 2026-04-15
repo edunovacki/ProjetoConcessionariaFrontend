@@ -19,7 +19,7 @@ export interface OrdemServico {
   dataEntrada: string;
   dataPrevisao: string;
   dataConclusao?: string;
-  status: 'recepcao' | 'em_andamento' | 'concluido' | 'aguardando_retirada';
+  status: 'orçamento' | 'em_andamento' | 'concluido' | 'aguardando_retirada';
   servicosRealizar: string;
   observacoes: string;
   consultorResponsavel: string;
@@ -41,5 +41,5 @@ export interface OrdemServicoFormData {
   servicosRealizar: string;
   observacoes: string;
   consultorResponsavel: string;
-  status: 'recepcao' | 'em_andamento' | 'concluido' | 'aguardando_retirada';
+  status: 'orçamento' | 'em_andamento' | 'concluido' | 'aguardando_retirada';
 }

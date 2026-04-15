@@ -3,16 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { criarVeiculo, atualizarVeiculo, buscarVeiculoPorId } from '../services/veiculoService';
 import { listarClientes } from '../services/clienteService';
 import { Cliente } from '../types/cliente';
-import { formatarPlaca } from '../utils/validations';
 
 interface FormData {
   placa: string;
   modelo: string;
-  marca: string;
-  ano: number;
-  cor: string;
-  clienteId: number;
-  observacoes: string;
+  id_cliente: number;
 }
 
 const VeiculoForm: React.FC = () => {
@@ -23,11 +18,7 @@ const VeiculoForm: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
     placa: '',
     modelo: '',
-    marca: '',
-    ano: new Date().getFullYear(),
-    cor: '',
-    clienteId: 0,
-    observacoes: ''
+    id_cliente: 0
   });
   
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -56,13 +47,9 @@ const VeiculoForm: React.FC = () => {
       const veiculo = await buscarVeiculoPorId(veiculoId);
       if (veiculo) {
         setFormData({
-          placa: veiculo.placa,
-          modelo: veiculo.modelo,
-          marca: veiculo.marca,
-          ano: veiculo.ano,
-          cor: veiculo.cor,
-          clienteId: veiculo.clienteId,
-          observacoes: veiculo.observacoes || ''
+          placa: veiculo.placa || '',
+          modelo: veiculo.modelo || '',
+          id_cliente: veiculo.id_cliente || 0
         });
       } else {
         alert('Veículo não encontrado');
@@ -76,16 +63,14 @@ const VeiculoForm: React.FC = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
     let valorFormatado: any = value;
     
-    if (name === 'ano') {
-      valorFormatado = parseInt(value) || new Date().getFullYear();
-    } else if (name === 'placa') {
+    if (name === 'placa') {
       valorFormatado = value.toUpperCase();
-    } else if (name === 'clienteId') {
+    } else if (name === 'id_cliente') {
       valorFormatado = parseInt(value);
     }
     
@@ -99,33 +84,18 @@ const VeiculoForm: React.FC = () => {
   const validarFormulario = (): boolean => {
     const novosErros: { [key: string]: string } = {};
 
-    if (!formData.placa.trim()) {
+    if (!formData.placa || !formData.placa.trim()) {
       novosErros.placa = 'Placa é obrigatória';
     } else if (formData.placa.length < 7 || formData.placa.length > 8) {
       novosErros.placa = 'Placa deve ter 7 ou 8 caracteres';
     }
 
-    if (!formData.modelo.trim()) {
+    if (!formData.modelo || !formData.modelo.trim()) {
       novosErros.modelo = 'Modelo é obrigatório';
     }
 
-    if (!formData.marca.trim()) {
-      novosErros.marca = 'Marca é obrigatória';
-    }
-
-    const anoAtual = new Date().getFullYear();
-    if (!formData.ano) {
-      novosErros.ano = 'Ano é obrigatório';
-    } else if (formData.ano < 1950 || formData.ano > anoAtual + 1) {
-      novosErros.ano = `Ano deve estar entre 1950 e ${anoAtual + 1}`;
-    }
-
-    if (!formData.cor.trim()) {
-      novosErros.cor = 'Cor é obrigatória';
-    }
-
-    if (!formData.clienteId || formData.clienteId === 0) {
-      novosErros.clienteId = 'Selecione um cliente';
+    if (!formData.id_cliente || formData.id_cliente === 0) {
+      novosErros.id_cliente = 'Selecione um cliente';
     }
 
     setErros(novosErros);
@@ -142,18 +112,24 @@ const VeiculoForm: React.FC = () => {
     setCarregando(true);
 
     try {
+      const dadosParaEnviar = {
+        placa: formData.placa,
+        modelo: formData.modelo,
+        id_cliente: formData.id_cliente
+      };
+
       if (isEdicao && id) {
-        await atualizarVeiculo(parseInt(id), formData);
+        await atualizarVeiculo(parseInt(id), dadosParaEnviar);
         alert('Veículo atualizado com sucesso!');
       } else {
-        await criarVeiculo(formData);
+        await criarVeiculo(dadosParaEnviar);
         alert('Veículo cadastrado com sucesso!');
       }
       
       navigate('/veiculos');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar veículo:', error);
-      alert('Erro ao salvar veículo. Tente novamente.');
+      alert(error.response?.data?.error || 'Erro ao salvar veículo. Tente novamente.');
     } finally {
       setCarregando(false);
     }
@@ -173,20 +149,20 @@ const VeiculoForm: React.FC = () => {
         <div style={styles.formGroup}>
           <label style={styles.label}>Cliente:*</label>
           <select
-            name="clienteId"
-            value={formData.clienteId}
+            name="id_cliente"
+            value={formData.id_cliente}
             onChange={handleChange}
-            style={{...styles.select, borderColor: erros.clienteId ? '#dc3545' : '#ddd'}}
+            style={{...styles.select, borderColor: erros.id_cliente ? '#dc3545' : '#ddd'}}
             disabled={carregando}
           >
             <option value={0}>Selecione um cliente</option>
             {clientes.map(cliente => (
               <option key={cliente.id} value={cliente.id}>
-                {cliente.nome} - {cliente.cpf}
+                {cliente.nome} - {cliente.cpf || 'Sem CPF'}
               </option>
             ))}
           </select>
-          {erros.clienteId && <span style={styles.errorText}>{erros.clienteId}</span>}
+          {erros.id_cliente && <span style={styles.errorText}>{erros.id_cliente}</span>}
         </div>
 
         <div style={styles.formGroup}>
@@ -214,60 +190,9 @@ const VeiculoForm: React.FC = () => {
             onChange={handleChange}
             style={{...styles.input, borderColor: erros.modelo ? '#dc3545' : '#ddd'}}
             disabled={carregando}
+            placeholder="Ex: Civic, Corolla, Onix"
           />
           {erros.modelo && <span style={styles.errorText}>{erros.modelo}</span>}
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Marca:*</label>
-          <input
-            type="text"
-            name="marca"
-            value={formData.marca}
-            onChange={handleChange}
-            style={{...styles.input, borderColor: erros.marca ? '#dc3545' : '#ddd'}}
-            disabled={carregando}
-          />
-          {erros.marca && <span style={styles.errorText}>{erros.marca}</span>}
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Ano:*</label>
-          <input
-            type="number"
-            name="ano"
-            value={formData.ano}
-            onChange={handleChange}
-            style={{...styles.input, borderColor: erros.ano ? '#dc3545' : '#ddd'}}
-            disabled={carregando}
-          />
-          {erros.ano && <span style={styles.errorText}>{erros.ano}</span>}
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Cor:*</label>
-          <input
-            type="text"
-            name="cor"
-            value={formData.cor}
-            onChange={handleChange}
-            style={{...styles.input, borderColor: erros.cor ? '#dc3545' : '#ddd'}}
-            disabled={carregando}
-          />
-          {erros.cor && <span style={styles.errorText}>{erros.cor}</span>}
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Observações:</label>
-          <textarea
-            name="observacoes"
-            value={formData.observacoes}
-            onChange={handleChange}
-            style={styles.textarea}
-            disabled={carregando}
-            rows={3}
-            placeholder="Observações sobre o veículo..."
-          />
         </div>
 
         <div style={styles.buttonGroup}>
@@ -312,7 +237,8 @@ const styles = {
   label: {
     fontSize: '14px',
     fontWeight: 'bold',
-    color: '#333'
+    color: '#333',
+    fontFamily: "Arial, Helvetica, sans-serif"
   },
   input: {
     padding: '10px',
@@ -328,18 +254,11 @@ const styles = {
     fontSize: '16px',
     backgroundColor: 'white'
   },
-  textarea: {
-    padding: '10px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '16px',
-    fontFamily: 'inherit',
-    resize: 'vertical' as const
-  },
   helperText: {
     fontSize: '11px',
     color: '#666',
-    marginTop: '4px'
+    marginTop: '4px',
+    fontFamily: "Arial, Helvetica, sans-serif",
   },
   errorText: {
     color: '#dc3545',

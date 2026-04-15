@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { criarCliente, atualizarCliente, buscarClientePorId } from '../services/clienteService';
-import { validarCPF, validarEmail, formatarCPF, formatarTelefone } from '../utils/validations';
+import { validarCPF, formatarCPF, formatarTelefone } from '../utils/validations';
 
 interface FormData {
   nome: string;
-  email: string;
   telefone: string;
   cpf: string;
-  endereco: string;
+  cnh: string;
 }
 
 const ClienteForm: React.FC = () => {
@@ -18,17 +17,15 @@ const ClienteForm: React.FC = () => {
 
   const [formData, setFormData] = useState<FormData>({
     nome: '',
-    email: '',
     telefone: '',
     cpf: '',
-    endereco: ''
+    cnh: ''
   });
   
   const [erros, setErros] = useState<{ [key: string]: string }>({});
   const [carregando, setCarregando] = useState(false);
   const [carregandoDados, setCarregandoDados] = useState(isEdicao);
 
-  // Carregar dados do cliente se for edição
   useEffect(() => {
     if (isEdicao && id) {
       carregarCliente(parseInt(id));
@@ -40,11 +37,10 @@ const ClienteForm: React.FC = () => {
       const cliente = await buscarClientePorId(clienteId);
       if (cliente) {
         setFormData({
-          nome: cliente.nome,
-          email: cliente.email,
-          telefone: cliente.telefone,
-          cpf: cliente.cpf, // CPF já vem formatado do banco
-          endereco: cliente.endereco
+          nome: cliente.nome || '',
+          telefone: cliente.telefone || '',
+          cpf: cliente.cpf || '',
+          cnh: cliente.cnh || ''
         });
       } else {
         alert('Cliente não encontrado');
@@ -58,17 +54,13 @@ const ClienteForm: React.FC = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     let valorFormatado = value;
     
-    // Formatação automática
     if (name === 'cpf') {
-      // Remove tudo que não é número
       const apenasNumeros = value.replace(/\D/g, '');
-      // Limita a 11 dígitos
       const numerosLimitados = apenasNumeros.slice(0, 11);
-      // Aplica a formatação
       valorFormatado = formatarCPF(numerosLimitados);
     } else if (name === 'telefone') {
       valorFormatado = formatarTelefone(value);
@@ -76,7 +68,6 @@ const ClienteForm: React.FC = () => {
     
     setFormData({ ...formData, [name]: valorFormatado });
     
-    // Limpar erro do campo quando o usuário começa a digitar
     if (erros[name]) {
       setErros({ ...erros, [name]: '' });
     }
@@ -85,45 +76,28 @@ const ClienteForm: React.FC = () => {
   const validarFormulario = (): boolean => {
     const novosErros: { [key: string]: string } = {};
 
-    // Validação do nome
-    if (!formData.nome.trim()) {
+    if (!formData.nome || !formData.nome.trim()) {
       novosErros.nome = 'Nome é obrigatório';
     } else if (formData.nome.trim().length < 3) {
       novosErros.nome = 'Nome deve ter pelo menos 3 caracteres';
     }
 
-    // Validação do email
-    if (!formData.email) {
-      novosErros.email = 'Email é obrigatório';
-    } else if (!validarEmail(formData.email)) {
-      novosErros.email = 'Digite um email válido (ex: nome@email.com)';
-    }
 
-    // Validação do telefone
-    if (!formData.telefone) {
-      novosErros.telefone = 'Telefone é obrigatório';
-    } else {
+    if (formData.telefone && formData.telefone.trim()) {
       const telefoneLimpo = formData.telefone.replace(/\D/g, '');
       if (telefoneLimpo.length < 10 || telefoneLimpo.length > 11) {
         novosErros.telefone = 'Telefone deve ter 10 ou 11 dígitos (com DDD)';
       }
     }
 
-    // Validação do CPF
-    if (!formData.cpf) {
-      novosErros.cpf = 'CPF é obrigatório';
-    } else {
+
+    if (formData.cpf && formData.cpf.trim()) {
       const cpfNumerico = formData.cpf.replace(/[^\d]/g, '');
       if (cpfNumerico.length !== 11) {
         novosErros.cpf = 'CPF deve ter 11 dígitos';
       } else if (!validarCPF(formData.cpf)) {
         novosErros.cpf = 'CPF inválido';
       }
-    }
-
-    // Validação do endereço
-    if (!formData.endereco.trim()) {
-      novosErros.endereco = 'Endereço é obrigatório';
     }
 
     setErros(novosErros);
@@ -140,13 +114,11 @@ const ClienteForm: React.FC = () => {
     setCarregando(true);
 
     try {
-      // Preparar dados para envio
       const dadosParaEnviar = {
         nome: formData.nome,
-        email: formData.email,
-        telefone: formData.telefone,
-        cpf: formData.cpf.replace(/[^\d]/g, ''), // Remove formatação para enviar só números
-        endereco: formData.endereco
+        telefone: formData.telefone || undefined,
+        cpf: formData.cpf ? formData.cpf.replace(/[^\d]/g, '') : undefined,
+        cnh: formData.cnh || undefined
       };
 
       if (isEdicao && id) {
@@ -158,9 +130,9 @@ const ClienteForm: React.FC = () => {
       }
       
       navigate('/clientes');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar cliente:', error);
-      alert('Erro ao salvar cliente. Tente novamente.');
+      alert(error.response?.data?.error || 'Erro ao salvar cliente. Tente novamente.');
     } finally {
       setCarregando(false);
     }
@@ -191,21 +163,7 @@ const ClienteForm: React.FC = () => {
         </div>
 
         <div style={styles.formGroup}>
-          <label style={styles.label}>Email:*</label>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            style={{...styles.input, borderColor: erros.email ? '#dc3545' : '#ddd'}}
-            disabled={carregando}
-            placeholder="cliente@email.com"
-          />
-          {erros.email && <span style={styles.errorText}>{erros.email}</span>}
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Telefone:*</label>
+          <label style={styles.label}>Telefone:</label>
           <input
             type="text"
             name="telefone"
@@ -216,10 +174,11 @@ const ClienteForm: React.FC = () => {
             placeholder="(11) 99999-9999"
           />
           {erros.telefone && <span style={styles.errorText}>{erros.telefone}</span>}
+          <span style={styles.helperText}>Opcional - Digite apenas números</span>
         </div>
 
         <div style={styles.formGroup}>
-          <label style={styles.label}>CPF:*</label>
+          <label style={styles.label}>CPF:</label>
           <input
             type="text"
             name="cpf"
@@ -231,21 +190,22 @@ const ClienteForm: React.FC = () => {
             maxLength={14}
           />
           {erros.cpf && <span style={styles.errorText}>{erros.cpf}</span>}
-          <span style={styles.helperText}>Digite apenas números - a formatação é automática</span>
+          <span style={styles.helperText}>Opcional - Digite apenas números, formatação automática</span>
         </div>
 
         <div style={styles.formGroup}>
-          <label style={styles.label}>Endereço:*</label>
-          <textarea
-            name="endereco"
-            value={formData.endereco}
+          <label style={styles.label}>CNH:</label>
+          <input
+            type="text"
+            name="cnh"
+            value={formData.cnh}
             onChange={handleChange}
-            style={{...styles.textarea, borderColor: erros.endereco ? '#dc3545' : '#ddd'}}
+            style={styles.input}
             disabled={carregando}
-            rows={3}
-            placeholder="Rua, número, bairro, cidade, estado"
+            placeholder="00000000000"
+            maxLength={11}
           />
-          {erros.endereco && <span style={styles.errorText}>{erros.endereco}</span>}
+          <span style={styles.helperText}>Opcional - Carteira Nacional de Habilitação</span>
         </div>
 
         <div style={styles.buttonGroup}>
@@ -290,6 +250,7 @@ const styles = {
   label: {
     fontSize: '14px',
     fontWeight: 'bold',
+    fontFamily: "Arial, Helvetica, sans-serif",
     color: '#333'
   },
   input: {
@@ -299,17 +260,9 @@ const styles = {
     fontSize: '16px',
     transition: 'border-color 0.3s'
   },
-  textarea: {
-    padding: '10px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '16px',
-    fontFamily: 'inherit',
-    resize: 'vertical' as const,
-    transition: 'border-color 0.3s'
-  },
   helperText: {
     fontSize: '11px',
+    fontFamily: "Arial, Helvetica, sans-serif",
     color: '#666',
     marginTop: '4px'
   },

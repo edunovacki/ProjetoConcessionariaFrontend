@@ -15,14 +15,12 @@ const Login: React.FC = () => {
   const validarFormulario = (): boolean => {
     const novosErros: { [key: string]: string } = {};
 
-    // Validação do email
     if (!email) {
       novosErros.email = 'Email é obrigatório';
     } else if (!validarEmail(email)) {
       novosErros.email = 'Digite um email válido (ex: nome@gmail.com)';
     }
 
-    // Validação da senha
     if (!senha) {
       novosErros.senha = 'Senha é obrigatória';
     }
@@ -43,11 +41,13 @@ const Login: React.FC = () => {
     try {
       const response = await login(email, senha);
       
-      // Mapear para o formato esperado pelo contexto
+      // ✅ CORRIGIDO: incluir CPF e telefone no userData
       const userData = {
         id: response.usuario.id,
         nome: response.usuario.nome,
-        email: response.usuario.email
+        email: response.usuario.email,
+        cpf: response.usuario.cpf || '',
+        telefone: response.usuario.telefone || ''
       };
       
       authLogin(response.token, userData);
@@ -108,10 +108,6 @@ const Login: React.FC = () => {
             Não tem uma conta? <Link to="/cadastro" style={styles.link}>Cadastre-se</Link>
           </p>
         </form>
-
-        <p style={styles.info}>
-          Credenciais de teste: admin@concessionaria.com / 123456
-        </p>
       </div>
     </div>
   );
@@ -187,13 +183,6 @@ const styles = {
     fontFamily: "Arial, Helvetica, sans-serif",
     marginTop: '4px',
     marginLeft: '10px'
-  },
-  info: {
-    marginTop: '15px',
-    fontSize: '12px',
-    color: '#666',
-    fontFamily: "Arial, Helvetica, sans-serif",
-    textAlign: 'center' as const
   },
   linkContainer: {
     marginTop: '15px',

@@ -9,40 +9,90 @@ interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-// Mapear os campos do back-end para o front-end
-const mapearOrdem = (orcamento: any): OrdemServico => {
+const formatarDataLocal = (data: string | null): string => {
+  if (!data) return '';
+  const parteData = data.split('T')[0];
+  return parteData;
+};
+
+const mapearOrcamentoParaOrdemServico = (orcamento: any): OrdemServico => {
+  // Corrigir as datas
+  const dataEntradaRaw = orcamento.data_inicio ? formatarDataLocal(orcamento.data_inicio) : new Date().toISOString().split('T')[0];
+  const dataPrevisaoRaw = orcamento.data_termino ? formatarDataLocal(orcamento.data_termino) : '';
+  
   return {
     id: orcamento.id,
     numeroOS: `OS-${orcamento.id}`,
     clienteId: orcamento.id_cliente,
-    cliente: orcamento.clientes,
+    cliente: orcamento.clientes ? {
+      id: orcamento.clientes.id,
+      nome: orcamento.clientes.nome || '',
+      telefone: orcamento.clientes.telefone || 'Não informado',
+      cpf: orcamento.clientes.cpf || '',
+      cnh: '',
+      criado_em: orcamento.criado_em || '',
+      atualizado_em: orcamento.atualizado_em || '',
+      deletado_em: null
+    } : undefined,
     veiculoId: orcamento.id_veiculo,
-    veiculo: orcamento.veiculos,
-    departamentoId: orcamento.veiculos?.id_departamento || 1,
-    departamento: orcamento.veiculos?.departamentos,
+    veiculo: orcamento.veiculos ? {
+      id: orcamento.veiculos.id,
+      placa: orcamento.veiculos.placa || '',
+      modelo: orcamento.veiculos.modelo || '',
+      marca: '',
+      ano: new Date().getFullYear(),
+      cor: '',
+      id_cliente: orcamento.veiculos.id_cliente || 0,
+      id_usuario: null,
+      id_departamento: orcamento.id_departamento || 1,
+      criado_em: orcamento.criado_em || '',
+      atualizado_em: orcamento.atualizado_em || '',
+      deletado_em: null
+    } : undefined,
+    departamentoId: orcamento.id_departamento || 1,
+    departamento: orcamento.departamentos ? {
+      id: orcamento.departamentos.id,
+      nome: orcamento.departamentos.nome,
+      descricao: orcamento.departamentos.descricao || '',
+      cor: orcamento.departamentos.cor || '#6c757d',
+      ativo: true,
+      criado_em: orcamento.departamentos.criado_em || '',
+      atualizado_em: orcamento.departamentos.atualizado_em || '',
+      deletado_em: null
+    } : undefined,
     placa: orcamento.veiculos?.placa || '',
     modelo: orcamento.veiculos?.modelo || '',
-    marca: orcamento.veiculos?.modelo?.split(' ')[0] || '',
+    marca: '',
     ano: new Date().getFullYear(),
     cor: '',
-    dataEntrada: orcamento.data_inicio ? new Date(orcamento.data_inicio).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-    dataPrevisao: orcamento.data_termino ? new Date(orcamento.data_termino).toISOString().split('T')[0] : '',
+    dataEntrada: dataEntradaRaw,
+    dataPrevisao: dataPrevisaoRaw,
     status: orcamento.etapa === 'concluido' ? 'concluido' : 
-            orcamento.etapa === 'aguardando_retirada' ? 'aguardando_retirada' : 'em_andamento',
+            orcamento.etapa === 'aguardando_retirada' ? 'aguardando_retirada' : 
+            orcamento.etapa === 'orçamento' ? 'orçamento' : 'em_andamento',
     servicosRealizar: orcamento.descricao || '',
     observacoes: '',
-    consultorResponsavel: orcamento.usuarios?.nome || 'Sistema',
-    tempoDecorrido: calcularTempoDecorrido(orcamento.data_inicio)
+    consultorResponsavel: orcamento.usuarios?.nome || 'Sistema'
   };
 };
 
-const calcularTempoDecorrido = (dataEntrada: string | Date): number => {
-  if (!dataEntrada) return 0;
-  const entrada = new Date(dataEntrada);
-  const hoje = new Date();
-  const diffTime = Math.abs(hoje.getTime() - entrada.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
+const mapearOrdemServicoParaOrcamento = (dados: OrdemServicoFormData): any => {
+  const dataEntrada = dados.dataEntrada ? new Date(dados.dataEntrada).toISOString() : new Date().toISOString();
+  const dataPrevisao = dados.dataPrevisao ? new Date(dados.dataPrevisao).toISOString() : null;
+  
+  return {
+    id_cliente: dados.clienteId,
+    id_veiculo: dados.veiculoId,
+    id_departamento: Number(dados.departamentoId),
+    etapa: dados.status === 'orçamento' ? 'orçamento' :
+           dados.status === 'em_andamento' ? 'em_andamento' :
+           dados.status === 'concluido' ? 'concluido' : 'aguardando_retirada',
+    descricao: dados.servicosRealizar,
+    data_inicio: dataEntrada,
+    data_termino: dataPrevisao,
+    valor_inicial: null,
+    valor_final: null
+  };
 };
 
 export const listarOrdensServico = async (
@@ -60,22 +110,20 @@ export const listarOrdensServico = async (
   
   const response = await api.get<PaginatedResponse<any>>('/orcamentos', { params });
   
-  let dados = response.data.data.map(mapearOrdem);
+  let dados = response.data.data.map(mapearOrcamentoParaOrdemServico);
   
-  // Filtro por departamento (front-end, pois o back-end não tem esse filtro)
-  if (filtroDepartamento && filtroDepartamento > 0) {
-    dados = dados.filter(o => o.departamentoId === filtroDepartamento);
-  }
-  
-  // Filtro por busca
   if (busca && busca.trim() !== '') {
     const termoBusca = busca.toLowerCase().trim();
-    dados = dados.filter(o => 
+    dados = dados.filter((o: OrdemServico) => 
       o.placa.toLowerCase().includes(termoBusca) ||
       o.modelo.toLowerCase().includes(termoBusca) ||
       o.numeroOS.toLowerCase().includes(termoBusca) ||
       o.cliente?.nome.toLowerCase().includes(termoBusca)
     );
+  }
+  
+  if (filtroDepartamento && filtroDepartamento > 0) {
+    dados = dados.filter(o => o.departamentoId === filtroDepartamento);
   }
   
   return {
@@ -86,40 +134,40 @@ export const listarOrdensServico = async (
 
 export const listarTodasOrdensServico = async (): Promise<OrdemServico[]> => {
   const response = await api.get<PaginatedResponse<any>>('/orcamentos', { params: { limit: 1000 } });
-  return response.data.data.map(mapearOrdem);
+  return response.data.data.map(mapearOrcamentoParaOrdemServico);
 };
 
 export const buscarOrdemServicoPorId = async (id: number): Promise<OrdemServico | null> => {
   const response = await api.get(`/orcamentos/${id}`);
   const orcamento = response.data.data || response.data;
-  return mapearOrdem(orcamento);
+  return mapearOrcamentoParaOrdemServico(orcamento);
 };
 
 export const criarOrdemServico = async (dados: OrdemServicoFormData): Promise<OrdemServico> => {
-  const payload = {
-    id_cliente: dados.clienteId,
-    id_veiculo: dados.veiculoId,
-    etapa: dados.status,
-    descricao: dados.servicosRealizar,
-    data_inicio: dados.dataEntrada,
-    data_termino: dados.dataPrevisao
-  };
-  
+  const payload = mapearOrdemServicoParaOrcamento(dados);
+  console.log('📤 Enviando para API:', payload);
   const response = await api.post('/orcamentos', payload);
-  return mapearOrdem(response.data.data || response.data);
+  console.log('📥 Resposta da API:', response.data);
+  return mapearOrcamentoParaOrdemServico(response.data.data || response.data);
 };
 
 export const atualizarOrdemServico = async (id: number, dados: Partial<OrdemServicoFormData>): Promise<OrdemServico> => {
   const payload: any = {};
   
-  if (dados.status) payload.etapa = dados.status;
+  if (dados.departamentoId) payload.id_departamento = Number(dados.departamentoId);
+  if (dados.status) {
+    payload.etapa = dados.status === 'orçamento' ? 'orçamento' :
+                    dados.status === 'em_andamento' ? 'em_andamento' :
+                    dados.status === 'concluido' ? 'concluido' : 'aguardando_retirada';
+  }
   if (dados.servicosRealizar) payload.descricao = dados.servicosRealizar;
-  if (dados.dataPrevisao) payload.data_termino = dados.dataPrevisao;
+  if (dados.dataPrevisao) payload.data_termino = new Date(dados.dataPrevisao).toISOString();
   if (dados.clienteId) payload.id_cliente = dados.clienteId;
   if (dados.veiculoId) payload.id_veiculo = dados.veiculoId;
   
+  console.log('📤 Atualizando na API:', payload);
   const response = await api.put(`/orcamentos/${id}`, payload);
-  return mapearOrdem(response.data.data || response.data);
+  return mapearOrcamentoParaOrdemServico(response.data.data || response.data);
 };
 
 export const deletarOrdemServico = async (id: number): Promise<void> => {

@@ -87,18 +87,23 @@ export const formatarCPF = (cpf: string): string => {
   return `${cpf.slice(0, 3)}.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-${cpf.slice(9, 11)}`;
 };
 
-// Formatar telefone
+// Formatar telefone (com limite de 11 dígitos)
 export const formatarTelefone = (telefone: string): string => {
-  telefone = telefone.replace(/\D/g, '');
+  // Remove tudo que não é número
+  let numeros = telefone.replace(/\D/g, '');
   
-  if (telefone.length === 10) {
-    return `(${telefone.slice(0, 2)}) ${telefone.slice(2, 6)}-${telefone.slice(6, 10)}`;
-  } else if (telefone.length === 11) {
-    return `(${telefone.slice(0, 2)}) ${telefone.slice(2, 7)}-${telefone.slice(7, 11)}`;
+  // Limita a 11 dígitos (máximo para telefone brasileiro)
+  numeros = numeros.slice(0, 11);
+  
+  if (numeros.length === 10) {
+    return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 6)}-${numeros.slice(6, 10)}`;
+  } else if (numeros.length === 11) {
+    return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7, 11)}`;
+  } else if (numeros.length > 0) {
+    return numeros;
   }
   
-  return telefone;
-
+  return '';
 };
 
 // Formatar valor para moeda brasileira
